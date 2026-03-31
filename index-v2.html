@@ -543,6 +543,7 @@
 
     function filterData(data, state) {
       let result = [...data];
+      console.log('[查詢] 總筆數:', result.length);
 
       // County/Districts filter
       if (state.selectedCounty) {
@@ -551,11 +552,13 @@
           const dist = row[COLUMNS.dist] || '';
           return allDistricts.some(d => dist.includes(d));
         });
+        console.log('[查詢] 縣市過濾後:', result.length);
         if (state.selectedDistricts.length > 0) {
           result = result.filter(row => {
             const dist = row[COLUMNS.dist] || '';
             return state.selectedDistricts.some(d => dist.includes(d));
           });
+          console.log('[查詢] 鄉鎮過濾後:', result.length);
         }
       }
 
@@ -565,6 +568,7 @@
           const tgt = row[COLUMNS.tgt] || '';
           return tgt.includes(state.selectedTargetType);
         });
+        console.log('[查詢] 標的類型過濾後:', result.length);
       }
 
       // Building type filter
@@ -575,6 +579,7 @@
             return bt.keywords.some(kw => bType.includes(kw));
           });
         });
+        console.log('[查詢] 建物類型過濾後:', result.length);
       }
 
       // Urban zones filter
@@ -583,6 +588,7 @@
           const uZone = row[COLUMNS.uZone] || '';
           return state.selectedUrbanZones.some(uz => uZone.includes(uz.keyword));
         });
+        console.log('[查詢] 都市使用分區過濾後:', result.length);
       }
 
       // Non-urban zones filter
@@ -591,6 +597,7 @@
           const nuZone = row[COLUMNS.nuZone] || '';
           return state.selectedNonUrbanZones.includes(nuZone);
         });
+        console.log('[查詢] 非都市分區過濾後:', result.length);
       }
 
       // Non-urban uses filter
@@ -599,21 +606,27 @@
           const nuUse = row[COLUMNS.nuUse] || '';
           return state.selectedNonUrbanUses.includes(nuUse);
         });
+        console.log('[查詢] 非都市用地過濾後:', result.length);
       }
 
       // Year filter
+      const sampleDate = result.length > 0 ? result[0][COLUMNS.txD] : '(無資料)';
+      console.log('[查詢] 年份範圍:', state.startYear, '~', state.endYear, '| 樣本日期:', sampleDate);
       result = result.filter(row => {
         const year = extractROCYear(row[COLUMNS.txD]);
         if (year === null) return false;
         return year >= state.startYear && year <= state.endYear;
       });
+      console.log('[查詢] 年份過濾後:', result.length);
 
       // Price filter (in 萬)
+      console.log('[查詢] 價格範圍(萬):', state.priceMin, '~', state.priceMax);
       result = result.filter(row => {
         const price = parseFloat(row[COLUMNS.tP]) || 0;
         const priceInTen = price / 10000;
         return priceInTen >= state.priceMin && priceInTen <= state.priceMax;
       });
+      console.log('[查詢] 價格過濾後:', result.length);
 
       // Building area filter
       if (state.areaMin > 0 || state.areaMax < 9999999) {
