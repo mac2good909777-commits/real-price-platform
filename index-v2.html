@@ -609,24 +609,30 @@
         console.log('[查詢] 非都市用地過濾後:', result.length);
       }
 
-      // Year filter
-      const sampleDate = result.length > 0 ? result[0][COLUMNS.txD] : '(無資料)';
-      console.log('[查詢] 年份範圍:', state.startYear, '~', state.endYear, '| 樣本日期:', sampleDate);
-      result = result.filter(row => {
-        const year = extractROCYear(row[COLUMNS.txD]);
-        if (year === null) return false;
-        return year >= state.startYear && year <= state.endYear;
-      });
-      console.log('[查詢] 年份過濾後:', result.length);
+      // Year filter — 只在 startYear/endYear 均為有效數字時才過濾
+      const startYr = parseInt(state.startYear);
+      const endYr = parseInt(state.endYear);
+      if (!isNaN(startYr) && !isNaN(endYr)) {
+        const beforeYear = result.length;
+        result = result.filter(row => {
+          const year = extractROCYear(row[COLUMNS.txD]);
+          if (year === null) return true; // 日期無法解析 → 保留
+          return year >= startYr && year <= endYr;
+        });
+        console.log('[查詢] 年份過濾 (' + startYr + '~' + endYr + '):', beforeYear, '→', result.length);
+      }
 
-      // Price filter (in 萬)
-      console.log('[查詢] 價格範圍(萬):', state.priceMin, '~', state.priceMax);
-      result = result.filter(row => {
-        const price = parseFloat(row[COLUMNS.tP]) || 0;
-        const priceInTen = price / 10000;
-        return priceInTen >= state.priceMin && priceInTen <= state.priceMax;
-      });
-      console.log('[查詢] 價格過濾後:', result.length);
+      // Price filter — 只在非預設值時才過濾
+      const pMin = state.priceMin || 0;
+      const pMax = state.priceMax || 9999999;
+      if (pMin > 0 || pMax < 9999999) {
+        result = result.filter(row => {
+          const price = parseFloat(row[COLUMNS.tP]) || 0;
+          const priceInWan = price / 10000;
+          return priceInWan >= pMin && priceInWan <= pMax;
+        });
+        console.log('[查詢] 價格過濾 (' + pMin + '~' + pMax + '萬):', result.length);
+      }
 
       // Building area filter
       if (state.areaMin > 0 || state.areaMax < 9999999) {
