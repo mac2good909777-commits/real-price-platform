@@ -446,6 +446,52 @@
   <script type="text/javascript">
     const h = React.createElement;
 
+    // IndexedDB 持久化
+    const DB_NAME = 'RPPlatform';
+    const DB_VER = 1;
+    const DB_STORE = 'uploads';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(DB_STORE)) {
+            db.createObjectStore(DB_STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function saveDataToDB(data) {
+      return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).put(data, 'allData');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      }));
+    }
+
+    function loadDataFromDB() {
+      return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readonly');
+        const req = tx.objectStore(DB_STORE).get('allData');
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function clearDB() {
+      return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).delete('allData');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      }));
+    }
+
     // Constants
     const COLUMNS = {
       dist: '鄉鎮市區', tgt: '交易標的', addr: '土地位置建物門牌',
@@ -695,6 +741,7 @@
       prices.sort((a, b) => a - b);
       unitPrices.sort((a, b) => a - b);
 
+      const safeAvg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
       const getMedian = (arr) => {
         if (arr.length === 0) return 0;
         const mid = Math.floor(arr.length / 2);
@@ -703,12 +750,12 @@
 
       return {
         count: data.length,
-        avgPrice: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+        avgPrice: Math.round(safeAvg(prices)),
         medianPrice: getMedian(prices),
-        minPrice: Math.min(...prices),
-        maxPrice: Math.max(...prices),
-        avgUnitPrice: Math.round(unitPrices.reduce((a, b) => a + b, 0) / unitPrices.length),
-        avgArea: Math.round(areas.reduce((a, b) => a + b, 0) / areas.length * 100) / 100
+        minPrice: prices.length > 0 ? prices[0] : 0,
+        maxPrice: prices.length > 0 ? prices[prices.length - 1] : 0,
+        avgUnitPrice: Math.round(safeAvg(unitPrices)),
+        avgArea: Math.round(safeAvg(areas) * 100) / 100
       };
     }
 
@@ -744,6 +791,21 @@
         sortBy: null, sortDesc: false,
         uploadStatus: '', message: '', messageType: ''
       });
+
+      // 啟動時從 IndexedDB 讀取快取資料
+      React.useEffect(() => {
+        loadDataFromDB().then(cached => {
+          if (cached && cached.length > 0) {
+            setAppState(prev => ({
+              ...prev,
+              data: cached,
+              message: '從快取載入 ' + cached.length + ' 筆資料（如需更新請重新上傳）',
+              messageType: 'success',
+              uploadStatus: 'done'
+            }));
+          }
+        }).catch(err => console.error('IndexedDB 讀取失敗:', err));
+      }, []);
 
       const handleFileUpload = (e) => {
         // 先轉成 Array，避免 e.target.value='' 清空 FileList 後 files 變空
@@ -792,8 +854,8 @@
 
       const finishUpload = (allData) => {
         const msg = allData.length > 0
-          ? '成功上傳 ' + allData.length + ' 筆資料'
-          : '⚠️ 讀取到 0 筆資料，請確認檔案格式（需含「鄉鎮市區」欄位）';
+          ? '成功上傳 ' + allData.length + ' 筆資料（已快取，下次免重傳）'
+          : '讀取到 0 筆資料，請確認檔案格式（需含「鄉鎮市區」欄位）';
         setAppState(prev => ({
           ...prev,
           data: allData,
@@ -803,6 +865,10 @@
           uploadStatus: 'done',
           currentPage: 1
         }));
+        // 存入 IndexedDB
+        if (allData.length > 0) {
+          saveDataToDB(allData).catch(err => console.error('IndexedDB 儲存失敗:', err));
+        }
       };
 
       const handleDragOver = (e) => {
@@ -822,13 +888,19 @@
       };
 
       const applyFilters = () => {
+        if (appState.data.length === 0) {
+          setAppState(prev => ({ ...prev, message: '請先上傳資料', messageType: 'error' }));
+          return;
+        }
         const filtered = filterData(appState.data, appState);
         setAppState(prev => ({
           ...prev,
           filteredData: filtered,
           currentPage: 1,
-          message: '篩選完成: ' + filtered.length + ' 筆',
-          messageType: 'info'
+          message: filtered.length > 0
+            ? '篩選完成: ' + filtered.length + ' / ' + prev.data.length + ' 筆'
+            : '找不到符合條件的資料（共 ' + prev.data.length + ' 筆，請放寬篩選條件）',
+          messageType: filtered.length > 0 ? 'info' : 'error'
         }));
       };
 
@@ -991,7 +1063,21 @@
                 onChange: (e) => { handleFileUpload(e); e.target.value = ''; }
               }),
               h('button', { className: 'btn btn-primary', onClick: () => document.getElementById('fileInput').click() }, '選擇檔案'),
-              appState.data.length > 0 && h('button', { className: 'btn btn-secondary' }, '已載入: ' + appState.data.length + ' 筆')
+              appState.data.length > 0 && h('button', { className: 'btn btn-secondary' }, '已載入: ' + appState.data.length + ' 筆'),
+              appState.data.length > 0 && h('button', {
+                className: 'btn btn-secondary',
+                style: { marginLeft: '8px', color: '#999' },
+                onClick: () => {
+                  clearDB().then(() => {
+                    setAppState(prev => ({
+                      ...prev,
+                      data: [], filteredData: [],
+                      message: '已清除快取資料',
+                      messageType: 'info', uploadStatus: ''
+                    }));
+                  });
+                }
+              }, '清除快取')
             )
           ),
 
@@ -1106,7 +1192,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.startYear,
-                    onChange: (e) => setAppState(prev => ({ ...prev, startYear: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, startYear: v })); }
                   })
                 ),
                 h('div', { className: 'input-field' },
@@ -1114,7 +1200,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.endYear,
-                    onChange: (e) => setAppState(prev => ({ ...prev, endYear: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, endYear: v })); }
                   })
                 )
               ),
@@ -1141,7 +1227,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.priceMin,
-                    onChange: (e) => setAppState(prev => ({ ...prev, priceMin: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, priceMin: v })); }
                   })
                 ),
                 h('div', { className: 'input-field' },
@@ -1149,7 +1235,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.priceMax,
-                    onChange: (e) => setAppState(prev => ({ ...prev, priceMax: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, priceMax: v })); }
                   })
                 )
               )
@@ -1173,7 +1259,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.areaMin,
-                    onChange: (e) => setAppState(prev => ({ ...prev, areaMin: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, areaMin: v })); }
                   })
                 ),
                 h('div', { className: 'input-field' },
@@ -1181,7 +1267,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.areaMax,
-                    onChange: (e) => setAppState(prev => ({ ...prev, areaMax: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, areaMax: v })); }
                   })
                 )
               )
@@ -1205,7 +1291,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.landAreaMin,
-                    onChange: (e) => setAppState(prev => ({ ...prev, landAreaMin: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, landAreaMin: v })); }
                   })
                 ),
                 h('div', { className: 'input-field' },
@@ -1213,7 +1299,7 @@
                   h('input', {
                     type: 'number',
                     value: appState.landAreaMax,
-                    onChange: (e) => setAppState(prev => ({ ...prev, landAreaMax: parseInt(e.target.value) }))
+                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, landAreaMax: v })); }
                   })
                 )
               )
@@ -1251,9 +1337,19 @@
               ),
               h('button', { className: 'btn btn-primary', onClick: () => {
                 const parsed = parseNaturalQuery(appState.naturalQuery);
-                if (parsed.area) setAppState(prev => ({ ...prev, selectedCounty: parsed.area }));
-                if (parsed.type) setAppState(prev => ({ ...prev, selectedTargetType: parsed.type }));
-                applyFilters();
+                setAppState(prev => {
+                  const newState = { ...prev };
+                  if (parsed.area) newState.selectedCounty = parsed.area;
+                  if (parsed.type) newState.selectedTargetType = parsed.type;
+                  const filtered = filterData(newState.data, newState);
+                  newState.filteredData = filtered;
+                  newState.currentPage = 1;
+                  newState.message = filtered.length > 0
+                    ? '篩選完成: ' + filtered.length + ' / ' + newState.data.length + ' 筆'
+                    : '找不到符合條件的資料 (共 ' + newState.data.length + ' 筆)';
+                  newState.messageType = filtered.length > 0 ? 'info' : 'error';
+                  return newState;
+                });
               } }, '解析並查詢')
             ),
 
