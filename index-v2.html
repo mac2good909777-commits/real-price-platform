@@ -741,8 +741,8 @@
               const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
               const filtered = rows.filter(row => {
-                const rowStr = JSON.stringify(row).toLowerCase();
-                return !DIST_POLLUTION.some(p => rowStr.includes(p.toLowerCase()));
+                const dist = row['鄉鎮市區'] || '';
+                return !DIST_POLLUTION.some(p => dist.includes(p));
               });
 
               allData = allData.concat(filtered);
@@ -961,7 +961,7 @@
                 type: 'file',
                 multiple: true,
                 accept: '.xlsx,.xls',
-                onChange: handleFileUpload
+                onChange: (e) => { handleFileUpload(e); e.target.value = ''; }
               }),
               h('button', { className: 'btn btn-primary', onClick: () => document.getElementById('fileInput').click() }, '選擇檔案'),
               appState.data.length > 0 && h('button', { className: 'btn btn-secondary' }, '已載入: ' + appState.data.length + ' 筆')
