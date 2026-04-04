@@ -219,6 +219,177 @@
       border-color: #4B872F;
     }
 
+    /* Range Slider */
+    .range-slider-wrap {
+      margin: 12px 0;
+    }
+    .range-slider-container {
+      position: relative;
+      width: 100%;
+      height: 36px;
+    }
+    .range-slider-track-bg {
+      position: absolute;
+      width: 100%;
+      height: 6px;
+      top: 15px;
+      background: #DDD;
+      border-radius: 3px;
+      z-index: 1;
+    }
+    .range-slider-track-fill {
+      position: absolute;
+      height: 6px;
+      top: 15px;
+      background: linear-gradient(90deg, #4B872F, #6AB04C);
+      border-radius: 3px;
+      z-index: 2;
+    }
+    .range-slider-container input[type="range"] {
+      position: absolute;
+      width: 100%;
+      top: 6px;
+      height: 24px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      pointer-events: none;
+      z-index: 3;
+      margin: 0;
+    }
+    .range-slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 22px;
+      width: 22px;
+      border-radius: 50%;
+      background: #4B872F;
+      cursor: pointer;
+      pointer-events: all;
+      border: 3px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 4;
+    }
+    .range-slider-container input[type="range"]::-moz-range-thumb {
+      height: 22px;
+      width: 22px;
+      border-radius: 50%;
+      background: #4B872F;
+      cursor: pointer;
+      pointer-events: all;
+      border: 3px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .range-slider-container input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      background: transparent;
+    }
+    .range-slider-container input[type="range"]::-moz-range-track {
+      height: 6px;
+      background: transparent;
+    }
+    .range-slider-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .range-input-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+    }
+    .range-input-group input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #DDD;
+      border-radius: 4px;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 13px;
+      text-align: center;
+    }
+    .range-input-group input:focus {
+      outline: none;
+      border-color: #4B872F;
+      box-shadow: 0 0 0 3px rgba(75,135,47,0.1);
+    }
+    .range-input-group span {
+      font-size: 12px;
+      color: #666;
+      white-space: nowrap;
+    }
+    .range-separator {
+      font-size: 16px;
+      color: #999;
+      padding: 0 4px;
+    }
+    .range-display {
+      text-align: center;
+      font-size: 13px;
+      color: #4B872F;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* Land type chips */
+    .land-type-wrap {
+      display: flex;
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .land-type-chip {
+      padding: 10px 20px;
+      border: 2px solid #DDD;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: white;
+      color: #333;
+      transition: all 0.3s;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .land-type-chip:hover {
+      border-color: #4B872F;
+    }
+    .land-type-chip.active {
+      background-color: #E8F5E9;
+      color: #2B5937;
+      border-color: #4B872F;
+    }
+    .land-type-chip .check-icon {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #CCC;
+      border-radius: 3px;
+      text-align: center;
+      line-height: 14px;
+      font-size: 12px;
+      transition: all 0.3s;
+    }
+    .land-type-chip.active .check-icon {
+      background-color: #4B872F;
+      border-color: #4B872F;
+      color: white;
+    }
+    .sub-filter-section {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: #FAFAFA;
+      border-radius: 6px;
+      border-left: 3px solid #4B872F;
+    }
+    .sub-filter-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
     /* Tabs */
     .tab-header {
       display: flex;
@@ -326,7 +497,7 @@
       background-color: #2B5937;
     }
     table th.sortable:after {
-      content: ' ↕';
+      content: ' \u2195';
       opacity: 0.5;
     }
     table tbody tr {
@@ -432,6 +603,7 @@
       .summary-info { grid-template-columns: 1fr; }
       table { font-size: 12px; }
       table th, table td { padding: 8px 4px; }
+      .land-type-wrap { flex-direction: column; }
     }
   </style>
 </head>
@@ -525,6 +697,11 @@
       { keyword: '保護', label: '保護區' }
     ];
 
+    // 價格滑桿步進值（萬元）
+    const PRICE_STEPS = [0, 50, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000, 5000, 8000, 10000, 20000, 30000, 50000, 100000];
+    // 面積滑桿步進值（坪）
+    const AREA_STEPS = [0, 5, 10, 20, 30, 50, 80, 100, 150, 200, 300, 500, 800, 1000, 2000, 5000];
+
     const PRICE_RANGES = [
       { label: '0~500萬', min: 0, max: 500 },
       { label: '500~1000萬', min: 500, max: 1000 },
@@ -587,6 +764,30 @@
       return match ? parseInt(match[1]) : null;
     }
 
+    // 滑桿 helper: 找到最接近的步進索引
+    function findClosestStepIdx(steps, val) {
+      if (val <= steps[0]) return 0;
+      if (val >= steps[steps.length - 1]) return steps.length - 1;
+      let closest = 0;
+      for (let i = 0; i < steps.length; i++) {
+        if (Math.abs(steps[i] - val) < Math.abs(steps[closest] - val)) closest = i;
+      }
+      return closest;
+    }
+
+    // 格式化顯示金額
+    function formatPrice(val) {
+      if (val >= 9999999) return '不限';
+      if (val >= 10000) return (val / 10000).toFixed(1) + '億';
+      if (val >= 1000) return (val / 1000).toFixed(1) + '千萬';
+      return val + '萬';
+    }
+
+    function formatArea(val) {
+      if (val >= 9999999) return '不限';
+      return val + '坪';
+    }
+
     function filterData(data, state) {
       let result = [...data];
       console.log('[查詢] 總筆數:', result.length);
@@ -615,6 +816,23 @@
           return tgt.includes(state.selectedTargetType);
         });
         console.log('[查詢] 標的類型過濾後:', result.length);
+      }
+
+      // Land type filter (都市/非都市)
+      if (state.landTypeFilter && state.landTypeFilter.length > 0) {
+        const hasUrban = state.landTypeFilter.includes('urban');
+        const hasNonUrban = state.landTypeFilter.includes('nonurban');
+        if (!(hasUrban && hasNonUrban)) {
+          // 只選了其中一種才過濾
+          result = result.filter(row => {
+            const uZone = (row[COLUMNS.uZone] || '').trim();
+            const nuZone = (row[COLUMNS.nuZone] || '').trim();
+            if (hasUrban) return uZone !== '';
+            if (hasNonUrban) return nuZone !== '';
+            return true;
+          });
+          console.log('[查詢] 土地類型過濾後:', result.length);
+        }
       }
 
       // Building type filter
@@ -655,20 +873,20 @@
         console.log('[查詢] 非都市用地過濾後:', result.length);
       }
 
-      // Year filter — 只在 startYear/endYear 均為有效數字時才過濾
+      // Year filter
       const startYr = parseInt(state.startYear);
       const endYr = parseInt(state.endYear);
       if (!isNaN(startYr) && !isNaN(endYr)) {
         const beforeYear = result.length;
         result = result.filter(row => {
           const year = extractROCYear(row[COLUMNS.txD]);
-          if (year === null) return true; // 日期無法解析 → 保留
+          if (year === null) return true;
           return year >= startYr && year <= endYr;
         });
         console.log('[查詢] 年份過濾 (' + startYr + '~' + endYr + '):', beforeYear, '→', result.length);
       }
 
-      // Price filter — 只在非預設值時才過濾
+      // Price filter
       const pMin = state.priceMin || 0;
       const pMax = state.priceMax || 9999999;
       if (pMin > 0 || pMax < 9999999) {
@@ -707,8 +925,6 @@
 
     function parseNaturalQuery(query) {
       const result = { area: null, type: null, price: null };
-
-      // County detection
       const counties = Object.keys(DISTRICTS);
       for (let county of counties) {
         if (query.includes(county)) {
@@ -716,38 +932,27 @@
           break;
         }
       }
-
-      // Type detection
       if (query.includes('土地')) result.type = '土地';
       else if (query.includes('建物') || query.includes('房')) result.type = '建物';
       else if (query.includes('房地')) result.type = '房地';
-
-      // Price detection
       const priceMatch = query.match(/(\d+)\s*萬/);
-      if (priceMatch) {
-        result.price = parseInt(priceMatch[1]);
-      }
-
+      if (priceMatch) result.price = parseInt(priceMatch[1]);
       return result;
     }
 
     function calculateStats(data) {
       if (data.length === 0) return null;
-
       const prices = data.map(r => parseFloat(r[COLUMNS.tP]) || 0).filter(p => p > 0);
       const unitPrices = data.map(r => parseFloat(r[COLUMNS.uP]) || 0).filter(p => p > 0);
       const areas = data.map(r => sqmToTsubo(parseFloat(r[COLUMNS.bArea]) || 0)).filter(a => a > 0);
-
       prices.sort((a, b) => a - b);
       unitPrices.sort((a, b) => a - b);
-
       const safeAvg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
       const getMedian = (arr) => {
         if (arr.length === 0) return 0;
         const mid = Math.floor(arr.length / 2);
         return arr.length % 2 === 0 ? (arr[mid - 1] + arr[mid]) / 2 : arr[mid];
       };
-
       return {
         count: data.length,
         avgPrice: Math.round(safeAvg(prices)),
@@ -760,10 +965,7 @@
     }
 
     function exportCSV(data) {
-      if (data.length === 0) {
-        alert('沒有資料可匯出');
-        return;
-      }
+      if (data.length === 0) { alert('沒有資料可匯出'); return; }
       const headers = Object.values(COLUMNS);
       const rows = data.map(row => headers.map(h => row[h] || ''));
       const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
@@ -774,6 +976,79 @@
       link.click();
     }
 
+    // ========== RangeSlider 元件 ==========
+    function RangeSlider(props) {
+      var steps = props.steps;
+      var valueMin = props.valueMin;
+      var valueMax = props.valueMax;
+      var onChangeMin = props.onChangeMin;
+      var onChangeMax = props.onChangeMax;
+      var unit = props.unit || '';
+      var formatFn = props.formatFn || function(v) { return v; };
+
+      var maxIdx = steps.length - 1;
+      var minSliderIdx = findClosestStepIdx(steps, valueMin);
+      var maxSliderIdx = valueMax >= 9999999 ? maxIdx : findClosestStepIdx(steps, valueMax);
+
+      // 計算填充條位置
+      var leftPct = (minSliderIdx / maxIdx) * 100;
+      var rightPct = (1 - maxSliderIdx / maxIdx) * 100;
+
+      return h('div', { className: 'range-slider-wrap' },
+        h('div', { className: 'range-slider-container' },
+          h('div', { className: 'range-slider-track-bg' }),
+          h('div', { className: 'range-slider-track-fill', style: { left: leftPct + '%', right: rightPct + '%' } }),
+          h('input', {
+            type: 'range', min: 0, max: maxIdx, step: 1, value: minSliderIdx,
+            onChange: function(e) {
+              var idx = parseInt(e.target.value);
+              if (idx <= maxSliderIdx) onChangeMin(steps[idx]);
+            }
+          }),
+          h('input', {
+            type: 'range', min: 0, max: maxIdx, step: 1, value: maxSliderIdx,
+            onChange: function(e) {
+              var idx = parseInt(e.target.value);
+              if (idx >= minSliderIdx) {
+                onChangeMax(idx === maxIdx ? 9999999 : steps[idx]);
+              }
+            }
+          })
+        ),
+        h('div', { className: 'range-display' },
+          formatFn(valueMin) + ' ～ ' + (valueMax >= 9999999 ? '不限' : formatFn(valueMax))
+        ),
+        h('div', { className: 'range-slider-inputs' },
+          h('div', { className: 'range-input-group' },
+            h('input', {
+              type: 'number', value: valueMin,
+              onChange: function(e) {
+                var v = parseInt(e.target.value);
+                if (!isNaN(v) && v >= 0) onChangeMin(v);
+              },
+              placeholder: '最低'
+            }),
+            h('span', null, unit)
+          ),
+          h('span', { className: 'range-separator' }, '～'),
+          h('div', { className: 'range-input-group' },
+            h('input', {
+              type: 'number',
+              value: valueMax >= 9999999 ? '' : valueMax,
+              onChange: function(e) {
+                if (e.target.value === '') { onChangeMax(9999999); return; }
+                var v = parseInt(e.target.value);
+                if (!isNaN(v) && v >= 0) onChangeMax(v);
+              },
+              placeholder: '不限'
+            }),
+            h('span', null, unit)
+          )
+        )
+      );
+    }
+
+    // ========== App 主元件 ==========
     function App() {
       const [appState, setAppState] = React.useState({
         data: [], filteredData: [],
@@ -781,6 +1056,7 @@
         selectedTargetType: null,
         selectedBuildingTypes: [], selectedUrbanZones: [],
         selectedNonUrbanZones: [], selectedNonUrbanUses: [],
+        landTypeFilter: [],  // ['urban'], ['nonurban'], or both
         startYear: 108, endYear: getCurrentYear(),
         priceMin: 0, priceMax: 9999999,
         areaMin: 0, areaMax: 9999999,
@@ -808,7 +1084,6 @@
       }, []);
 
       const handleFileUpload = (e) => {
-        // 先轉成 Array，避免 e.target.value='' 清空 FileList 後 files 變空
         const rawFiles = e.target ? (e.target.files || []) : (e.dataTransfer ? e.dataTransfer.files : []);
         const files = Array.from(rawFiles);
         let allData = [];
@@ -822,27 +1097,16 @@
               const workbook = XLSX.read(data, { type: 'array' });
               const sheet = workbook.Sheets[workbook.SheetNames[0]];
               const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-
-              // 只過濾表頭污染列（鄉鎮市區欄含特殊字樣才排除）
               const filtered = rows.filter(row => {
                 const dist = row['鄉鎮市區'] || '';
                 return !DIST_POLLUTION.some(p => dist.includes(p));
               });
-
               console.log('[上傳]', file.name, '原始列數:', rows.length, '過濾後:', filtered.length);
-
               allData = allData.concat(filtered);
               processed++;
-
-              if (processed === files.length) {
-                finishUpload(allData);
-              }
+              if (processed === files.length) finishUpload(allData);
             } catch (err) {
-              setAppState(prev => ({
-                ...prev,
-                message: '檔案處理錯誤: ' + err.message,
-                messageType: 'error'
-              }));
+              setAppState(prev => ({ ...prev, message: '檔案處理錯誤: ' + err.message, messageType: 'error' }));
             }
           };
           reader.readAsArrayBuffer(file);
@@ -857,33 +1121,19 @@
           ? '成功上傳 ' + allData.length + ' 筆資料（已快取，下次免重傳）'
           : '讀取到 0 筆資料，請確認檔案格式（需含「鄉鎮市區」欄位）';
         setAppState(prev => ({
-          ...prev,
-          data: allData,
-          filteredData: [],
-          message: msg,
-          messageType: allData.length > 0 ? 'success' : 'error',
-          uploadStatus: 'done',
-          currentPage: 1
+          ...prev, data: allData, filteredData: [],
+          message: msg, messageType: allData.length > 0 ? 'success' : 'error',
+          uploadStatus: 'done', currentPage: 1
         }));
-        // 存入 IndexedDB
         if (allData.length > 0) {
           saveDataToDB(allData).catch(err => console.error('IndexedDB 儲存失敗:', err));
         }
       };
 
-      const handleDragOver = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.currentTarget.classList.add('dragover');
-      };
-      const handleDragLeave = (e) => {
-        e.preventDefault();
-        e.currentTarget.classList.remove('dragover');
-      };
+      const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add('dragover'); };
+      const handleDragLeave = (e) => { e.preventDefault(); e.currentTarget.classList.remove('dragover'); };
       const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.currentTarget.classList.remove('dragover');
+        e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove('dragover');
         handleFileUpload({ dataTransfer: e.dataTransfer });
       };
 
@@ -894,9 +1144,7 @@
         }
         const filtered = filterData(appState.data, appState);
         setAppState(prev => ({
-          ...prev,
-          filteredData: filtered,
-          currentPage: 1,
+          ...prev, filteredData: filtered, currentPage: 1,
           message: filtered.length > 0
             ? '篩選完成: ' + filtered.length + ' / ' + prev.data.length + ' 筆'
             : '找不到符合條件的資料（共 ' + prev.data.length + ' 筆，請放寬篩選條件）',
@@ -905,13 +1153,8 @@
       };
 
       const toggleCounty = (county) => {
-        setAppState(prev => ({
-          ...prev,
-          selectedCounty: prev.selectedCounty === county ? '' : county,
-          selectedDistricts: []
-        }));
+        setAppState(prev => ({ ...prev, selectedCounty: prev.selectedCounty === county ? '' : county, selectedDistricts: [] }));
       };
-
       const toggleDistrict = (district) => {
         setAppState(prev => {
           const newDistricts = prev.selectedDistricts.includes(district)
@@ -920,18 +1163,14 @@
           return { ...prev, selectedDistricts: newDistricts };
         });
       };
-
       const toggleTargetType = (type) => {
         setAppState(prev => ({
-          ...prev,
-          selectedTargetType: prev.selectedTargetType === type ? null : type,
-          selectedBuildingTypes: [],
-          selectedUrbanZones: [],
-          selectedNonUrbanZones: [],
-          selectedNonUrbanUses: []
+          ...prev, selectedTargetType: prev.selectedTargetType === type ? null : type,
+          selectedBuildingTypes: [], selectedUrbanZones: [],
+          selectedNonUrbanZones: [], selectedNonUrbanUses: [],
+          landTypeFilter: []
         }));
       };
-
       const toggleBuildingType = (bt) => {
         setAppState(prev => ({
           ...prev,
@@ -940,7 +1179,6 @@
             : [...prev.selectedBuildingTypes, bt]
         }));
       };
-
       const toggleUrbanZone = (uz) => {
         setAppState(prev => ({
           ...prev,
@@ -949,7 +1187,6 @@
             : [...prev.selectedUrbanZones, uz]
         }));
       };
-
       const toggleNonUrbanZone = (zone) => {
         setAppState(prev => ({
           ...prev,
@@ -958,7 +1195,6 @@
             : [...prev.selectedNonUrbanZones, zone]
         }));
       };
-
       const toggleNonUrbanUse = (use) => {
         setAppState(prev => ({
           ...prev,
@@ -967,37 +1203,34 @@
             : [...prev.selectedNonUrbanUses, use]
         }));
       };
+      const toggleLandType = (type) => {
+        setAppState(prev => {
+          const arr = prev.landTypeFilter;
+          const newArr = arr.includes(type) ? arr.filter(t => t !== type) : [...arr, type];
+          // 清除對應的子選項
+          const updates = { landTypeFilter: newArr };
+          if (!newArr.includes('urban')) updates.selectedUrbanZones = [];
+          if (!newArr.includes('nonurban')) { updates.selectedNonUrbanZones = []; updates.selectedNonUrbanUses = []; }
+          return { ...prev, ...updates };
+        });
+      };
 
       const togglePriceRange = (range) => {
         setAppState(prev => {
           const isActive = prev.priceMin === range.min && prev.priceMax === range.max;
-          return {
-            ...prev,
-            priceMin: isActive ? 0 : range.min,
-            priceMax: isActive ? 9999999 : range.max
-          };
+          return { ...prev, priceMin: isActive ? 0 : range.min, priceMax: isActive ? 9999999 : range.max };
         });
       };
-
       const toggleAreaRange = (range) => {
         setAppState(prev => {
           const isActive = prev.areaMin === range.min && prev.areaMax === range.max;
-          return {
-            ...prev,
-            areaMin: isActive ? 0 : range.min,
-            areaMax: isActive ? 9999999 : range.max
-          };
+          return { ...prev, areaMin: isActive ? 0 : range.min, areaMax: isActive ? 9999999 : range.max };
         });
       };
-
       const toggleLandAreaRange = (range) => {
         setAppState(prev => {
           const isActive = prev.landAreaMin === range.min && prev.landAreaMax === range.max;
-          return {
-            ...prev,
-            landAreaMin: isActive ? 0 : range.min,
-            landAreaMax: isActive ? 9999999 : range.max
-          };
+          return { ...prev, landAreaMin: isActive ? 0 : range.min, landAreaMax: isActive ? 9999999 : range.max };
         });
       };
 
@@ -1027,10 +1260,10 @@
       const sortedData = getSortedData();
       const paginatedData = sortedData.slice((appState.currentPage - 1) * appState.pageSize, appState.currentPage * appState.pageSize);
       const stats = calculateStats(appState.filteredData);
-
       const showResults = appState.filteredData.length > 0;
       const showTabs = appState.data.length > 0;
       const hasDistricts = appState.selectedCounty ? DISTRICTS[appState.selectedCounty] : [];
+      const showLandOptions = appState.selectedTargetType === '土地' || appState.selectedTargetType === '房地';
 
       return h('div', null,
         h('div', { className: 'header' },
@@ -1039,27 +1272,22 @@
         ),
 
         h('div', { className: 'container' },
-          // Upload Section
+          // ===== Upload Section =====
           h('div', { className: 'section' },
             h('h2', null, '資料上傳'),
             appState.message && h('div', { className: 'message message-' + appState.messageType }, appState.message),
             h('div', {
               className: 'upload-area',
-              onDragOver: handleDragOver,
-              onDragLeave: handleDragLeave,
-              onDrop: handleDrop,
+              onDragOver: handleDragOver, onDragLeave: handleDragLeave, onDrop: handleDrop,
               onClick: () => document.getElementById('fileInput').click()
             },
-              h('div', { className: 'icon' }, '📁'),
+              h('div', { className: 'icon' }, '\uD83D\uDCC1'),
               h('p', null, '拖放 Excel 檔案或點擊選擇'),
               h('p', null, '支援 .xlsx / .xls 多檔上傳')
             ),
             h('div', { className: 'upload-btns' },
               h('input', {
-                id: 'fileInput',
-                type: 'file',
-                multiple: true,
-                accept: '.xlsx,.xls',
+                id: 'fileInput', type: 'file', multiple: true, accept: '.xlsx,.xls',
                 onChange: (e) => { handleFileUpload(e); e.target.value = ''; }
               }),
               h('button', { className: 'btn btn-primary', onClick: () => document.getElementById('fileInput').click() }, '選擇檔案'),
@@ -1070,10 +1298,8 @@
                 onClick: () => {
                   clearDB().then(() => {
                     setAppState(prev => ({
-                      ...prev,
-                      data: [], filteredData: [],
-                      message: '已清除快取資料',
-                      messageType: 'info', uploadStatus: ''
+                      ...prev, data: [], filteredData: [],
+                      message: '已清除快取資料', messageType: 'info', uploadStatus: ''
                     }));
                   });
                 }
@@ -1081,11 +1307,11 @@
             )
           ),
 
-          // Filters Section
+          // ===== Filters Section =====
           appState.data.length > 0 && h('div', { className: 'section' },
             h('h2', null, '查詢標的設定'),
 
-            // County/District
+            // ① 區域
             h('div', { className: 'filter-group' },
               h('label', { className: 'filter-label' }, '① 區域'),
               h('div', { className: 'chip-wrap' },
@@ -1114,25 +1340,16 @@
               )
             ),
 
-            // Target Type
+            // ② 查詢標的類型
             h('div', { className: 'filter-group' },
               h('label', { className: 'filter-label' }, '② 查詢標的類型'),
               h('div', { className: 'chip-wrap' },
-                h('button', {
-                  className: 'chip ' + (appState.selectedTargetType === '土地' ? 'active' : ''),
-                  onClick: () => toggleTargetType('土地')
-                }, '土地'),
-                h('button', {
-                  className: 'chip ' + (appState.selectedTargetType === '建物' ? 'active' : ''),
-                  onClick: () => toggleTargetType('建物')
-                }, '建物'),
-                h('button', {
-                  className: 'chip ' + (appState.selectedTargetType === '房地' ? 'active' : ''),
-                  onClick: () => toggleTargetType('房地')
-                }, '房地')
+                h('button', { className: 'chip ' + (appState.selectedTargetType === '土地' ? 'active' : ''), onClick: () => toggleTargetType('土地') }, '土地'),
+                h('button', { className: 'chip ' + (appState.selectedTargetType === '建物' ? 'active' : ''), onClick: () => toggleTargetType('建物') }, '建物'),
+                h('button', { className: 'chip ' + (appState.selectedTargetType === '房地' ? 'active' : ''), onClick: () => toggleTargetType('房地') }, '房地')
               ),
 
-              // Building Types (show if 建物 or 房地)
+              // 建物類型（建物/房地時顯示）
               (appState.selectedTargetType === '建物' || appState.selectedTargetType === '房地') && h('div', null,
                 h('div', { className: 'chip-wrap' },
                   BUILDING_TYPES.map(bt =>
@@ -1145,61 +1362,81 @@
                 )
               ),
 
-              // Urban Zones (show if 土地 or 房地)
-              (appState.selectedTargetType === '土地' || appState.selectedTargetType === '房地') && h('div', null,
-                h('div', { className: 'chip-wrap' },
-                  URBAN_ZONES.map(uz =>
-                    h('button', {
-                      key: uz.keyword,
-                      className: 'chip sub-group ' + (appState.selectedUrbanZones.some(u => u.keyword === uz.keyword) ? 'active' : ''),
-                      onClick: () => toggleUrbanZone(uz)
-                    }, uz.label)
-                  )
-                )
-              ),
-
-              // Non-urban zones
-              (appState.selectedTargetType === '土地' || appState.selectedTargetType === '房地') && h('div', null,
-                h('p', { style: { fontSize: '12px', color: '#999', marginTop: '12px', marginBottom: '8px' } }, '非都市分區'),
-                h('div', { className: 'chip-wrap' },
-                  NON_URBAN_ZONES.map(zone =>
-                    h('button', {
-                      key: zone,
-                      className: 'chip sub-group ' + (appState.selectedNonUrbanZones.includes(zone) ? 'active' : ''),
-                      onClick: () => toggleNonUrbanZone(zone)
-                    }, zone)
+              // 土地分類：都市 / 非都市（土地/房地時顯示）
+              showLandOptions && h('div', { style: { marginTop: '16px' } },
+                h('p', { style: { fontSize: '13px', color: '#555', fontWeight: '600', marginBottom: '8px' } }, '土地分類（可複選）'),
+                h('div', { className: 'land-type-wrap' },
+                  h('button', {
+                    className: 'land-type-chip ' + (appState.landTypeFilter.includes('urban') ? 'active' : ''),
+                    onClick: () => toggleLandType('urban')
+                  },
+                    h('span', { className: 'check-icon' }, appState.landTypeFilter.includes('urban') ? '\u2713' : ''),
+                    '都市土地'
+                  ),
+                  h('button', {
+                    className: 'land-type-chip ' + (appState.landTypeFilter.includes('nonurban') ? 'active' : ''),
+                    onClick: () => toggleLandType('nonurban')
+                  },
+                    h('span', { className: 'check-icon' }, appState.landTypeFilter.includes('nonurban') ? '\u2713' : ''),
+                    '非都市土地'
                   )
                 ),
-                h('p', { style: { fontSize: '12px', color: '#999', marginTop: '12px', marginBottom: '8px' } }, '非都市編定'),
-                h('div', { className: 'chip-wrap' },
-                  NON_URBAN_USES.map(use =>
-                    h('button', {
-                      key: use,
-                      className: 'chip sub-group ' + (appState.selectedNonUrbanUses.includes(use) ? 'active' : ''),
-                      onClick: () => toggleNonUrbanUse(use)
-                    }, use)
+
+                // 都市土地子選項
+                appState.landTypeFilter.includes('urban') && h('div', { className: 'sub-filter-section' },
+                  h('div', { className: 'sub-filter-title' }, '都市土地使用分區'),
+                  h('div', { className: 'chip-wrap' },
+                    URBAN_ZONES.map(uz =>
+                      h('button', {
+                        key: uz.keyword,
+                        className: 'chip sub-group ' + (appState.selectedUrbanZones.some(u => u.keyword === uz.keyword) ? 'active' : ''),
+                        onClick: () => toggleUrbanZone(uz)
+                      }, uz.label)
+                    )
+                  )
+                ),
+
+                // 非都市土地子選項
+                appState.landTypeFilter.includes('nonurban') && h('div', { className: 'sub-filter-section', style: { marginTop: '8px' } },
+                  h('div', { className: 'sub-filter-title' }, '非都市土地使用分區'),
+                  h('div', { className: 'chip-wrap' },
+                    NON_URBAN_ZONES.map(zone =>
+                      h('button', {
+                        key: zone,
+                        className: 'chip sub-group ' + (appState.selectedNonUrbanZones.includes(zone) ? 'active' : ''),
+                        onClick: () => toggleNonUrbanZone(zone)
+                      }, zone)
+                    )
+                  ),
+                  h('div', { className: 'sub-filter-title', style: { marginTop: '12px' } }, '非都市土地使用編定'),
+                  h('div', { className: 'chip-wrap' },
+                    NON_URBAN_USES.map(use =>
+                      h('button', {
+                        key: use,
+                        className: 'chip sub-group ' + (appState.selectedNonUrbanUses.includes(use) ? 'active' : ''),
+                        onClick: () => toggleNonUrbanUse(use)
+                      }, use)
+                    )
                   )
                 )
               )
             ),
 
-            // Year Range
+            // ③ 查詢期間
             h('div', { className: 'filter-group' },
               h('label', { className: 'filter-label' }, '③ 查詢期間'),
               h('div', { className: 'input-row' },
                 h('div', { className: 'input-field' },
                   h('label', null, '起始年 (民國)'),
                   h('input', {
-                    type: 'number',
-                    value: appState.startYear,
+                    type: 'number', value: appState.startYear,
                     onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, startYear: v })); }
                   })
                 ),
                 h('div', { className: 'input-field' },
                   h('label', null, '結束年 (民國)'),
                   h('input', {
-                    type: 'number',
-                    value: appState.endYear,
+                    type: 'number', value: appState.endYear,
                     onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, endYear: v })); }
                   })
                 )
@@ -1209,7 +1446,7 @@
               )
             ),
 
-            // Price Range
+            // ④ 總價範圍
             h('div', { className: 'filter-group' },
               h('label', { className: 'filter-label' }, '④ 總價範圍 (萬元)'),
               h('div', { className: 'chip-wrap' },
@@ -1221,27 +1458,18 @@
                   }, range.label)
                 )
               ),
-              h('div', { className: 'input-row' },
-                h('div', { className: 'input-field' },
-                  h('label', null, '最低價 (萬)'),
-                  h('input', {
-                    type: 'number',
-                    value: appState.priceMin,
-                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, priceMin: v })); }
-                  })
-                ),
-                h('div', { className: 'input-field' },
-                  h('label', null, '最高價 (萬)'),
-                  h('input', {
-                    type: 'number',
-                    value: appState.priceMax,
-                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, priceMax: v })); }
-                  })
-                )
-              )
+              h(RangeSlider, {
+                steps: PRICE_STEPS,
+                valueMin: appState.priceMin,
+                valueMax: appState.priceMax,
+                unit: '萬',
+                formatFn: formatPrice,
+                onChangeMin: function(v) { setAppState(prev => ({ ...prev, priceMin: v })); },
+                onChangeMax: function(v) { setAppState(prev => ({ ...prev, priceMax: v })); }
+              })
             ),
 
-            // Building Area Range
+            // ⑤ 建物面積範圍
             h('div', { className: 'filter-group' },
               h('label', { className: 'filter-label' }, '⑤ 建物面積範圍 (坪)'),
               h('div', { className: 'chip-wrap' },
@@ -1253,29 +1481,20 @@
                   }, range.label)
                 )
               ),
-              h('div', { className: 'input-row' },
-                h('div', { className: 'input-field' },
-                  h('label', null, '最小坪數'),
-                  h('input', {
-                    type: 'number',
-                    value: appState.areaMin,
-                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, areaMin: v })); }
-                  })
-                ),
-                h('div', { className: 'input-field' },
-                  h('label', null, '最大坪數'),
-                  h('input', {
-                    type: 'number',
-                    value: appState.areaMax,
-                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, areaMax: v })); }
-                  })
-                )
-              )
+              h(RangeSlider, {
+                steps: AREA_STEPS,
+                valueMin: appState.areaMin,
+                valueMax: appState.areaMax,
+                unit: '坪',
+                formatFn: formatArea,
+                onChangeMin: function(v) { setAppState(prev => ({ ...prev, areaMin: v })); },
+                onChangeMax: function(v) { setAppState(prev => ({ ...prev, areaMax: v })); }
+              })
             ),
 
-            // Land Area Range
+            // ⑥ 土地面積範圍
             h('div', { className: 'filter-group' },
-              h('label', { className: 'filter-label' }, '土地面積範圍 (坪)'),
+              h('label', { className: 'filter-label' }, '⑥ 土地面積範圍 (坪)'),
               h('div', { className: 'chip-wrap' },
                 AREA_RANGES.map(range =>
                   h('button', {
@@ -1285,45 +1504,27 @@
                   }, range.label)
                 )
               ),
-              h('div', { className: 'input-row' },
-                h('div', { className: 'input-field' },
-                  h('label', null, '最小坪數'),
-                  h('input', {
-                    type: 'number',
-                    value: appState.landAreaMin,
-                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, landAreaMin: v })); }
-                  })
-                ),
-                h('div', { className: 'input-field' },
-                  h('label', null, '最大坪數'),
-                  h('input', {
-                    type: 'number',
-                    value: appState.landAreaMax,
-                    onChange: (e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setAppState(prev => ({ ...prev, landAreaMax: v })); }
-                  })
-                )
-              )
+              h(RangeSlider, {
+                steps: AREA_STEPS,
+                valueMin: appState.landAreaMin,
+                valueMax: appState.landAreaMax,
+                unit: '坪',
+                formatFn: formatArea,
+                onChangeMin: function(v) { setAppState(prev => ({ ...prev, landAreaMin: v })); },
+                onChangeMax: function(v) { setAppState(prev => ({ ...prev, landAreaMax: v })); }
+              })
             ),
 
-            h('button', { className: 'btn btn-primary', onClick: applyFilters, style: { marginTop: '16px' } }, '查詢')
+            h('button', { className: 'btn btn-primary', onClick: applyFilters, style: { marginTop: '16px', fontSize: '16px', padding: '12px 32px' } }, '查詢')
           ),
 
-          // Tabs
+          // ===== Tabs =====
           showTabs && h('div', { className: 'section' },
             h('h2', null, '查詢方式'),
             h('div', { className: 'tab-header' },
-              h('button', {
-                className: 'tab-btn ' + (appState.activeTab === 'structured' ? 'active' : ''),
-                onClick: () => setAppState(prev => ({ ...prev, activeTab: 'structured' }))
-              }, '結構化查詢'),
-              h('button', {
-                className: 'tab-btn ' + (appState.activeTab === 'natural' ? 'active' : ''),
-                onClick: () => setAppState(prev => ({ ...prev, activeTab: 'natural' }))
-              }, '自然語言查詢'),
-              h('button', {
-                className: 'tab-btn ' + (appState.activeTab === 'address' ? 'active' : ''),
-                onClick: () => setAppState(prev => ({ ...prev, activeTab: 'address' }))
-              }, '輸入地址')
+              h('button', { className: 'tab-btn ' + (appState.activeTab === 'structured' ? 'active' : ''), onClick: () => setAppState(prev => ({ ...prev, activeTab: 'structured' })) }, '結構化查詢'),
+              h('button', { className: 'tab-btn ' + (appState.activeTab === 'natural' ? 'active' : ''), onClick: () => setAppState(prev => ({ ...prev, activeTab: 'natural' })) }, '自然語言查詢'),
+              h('button', { className: 'tab-btn ' + (appState.activeTab === 'address' ? 'active' : ''), onClick: () => setAppState(prev => ({ ...prev, activeTab: 'address' })) }, '輸入地址')
             ),
 
             appState.activeTab === 'natural' && h('div', null,
@@ -1357,8 +1558,7 @@
               h('div', { className: 'input-field' },
                 h('label', null, '輸入地址'),
                 h('input', {
-                  type: 'text',
-                  value: appState.addressQuery,
+                  type: 'text', value: appState.addressQuery,
                   onChange: (e) => setAppState(prev => ({ ...prev, addressQuery: e.target.value })),
                   placeholder: '例: 台北市中山區南京東路'
                 })
@@ -1370,78 +1570,35 @@
                     const addr = row[COLUMNS.addr] || '';
                     return addr.includes(prev.addressQuery);
                   }),
-                  currentPage: 1,
-                  message: '地址搜尋完成',
-                  messageType: 'info'
+                  currentPage: 1, message: '地址搜尋完成', messageType: 'info'
                 }));
               } }, '搜尋')
             )
           ),
 
-          // Results
+          // ===== Results =====
           showResults && h('div', { className: 'section' },
             h('h2', null, '查詢結果'),
             stats && h('div', null,
               h('div', { className: 'summary-card' },
                 h('h3', null, '統計摘要'),
                 h('div', { className: 'summary-info' },
-                  h('div', { className: 'info-item' },
-                    h('strong', null, stats.count.toLocaleString()),
-                    '筆交易'
-                  ),
-                  h('div', { className: 'info-item' },
-                    h('strong', null, (stats.avgPrice / 10000).toFixed(2) + ' 萬'),
-                    '平均總價'
-                  ),
-                  h('div', { className: 'info-item' },
-                    h('strong', null, (stats.medianPrice / 10000).toFixed(2) + ' 萬'),
-                    '中位數'
-                  ),
-                  h('div', { className: 'info-item' },
-                    h('strong', null, stats.avgUnitPrice.toLocaleString()),
-                    '平均單價 (元/坪)'
-                  ),
-                  h('div', { className: 'info-item' },
-                    h('strong', null, stats.avgArea.toFixed(1)),
-                    '平均面積 (坪)'
-                  ),
-                  h('div', { className: 'info-item' },
-                    h('strong', null, (stats.minPrice / 10000).toFixed(2) + '～' + (stats.maxPrice / 10000).toFixed(2) + ' 萬'),
-                    '價格區間'
-                  )
+                  h('div', { className: 'info-item' }, h('strong', null, stats.count.toLocaleString()), '筆交易'),
+                  h('div', { className: 'info-item' }, h('strong', null, (stats.avgPrice / 10000).toFixed(2) + ' 萬'), '平均總價'),
+                  h('div', { className: 'info-item' }, h('strong', null, (stats.medianPrice / 10000).toFixed(2) + ' 萬'), '中位數'),
+                  h('div', { className: 'info-item' }, h('strong', null, stats.avgUnitPrice.toLocaleString()), '平均單價 (元/坪)'),
+                  h('div', { className: 'info-item' }, h('strong', null, stats.avgArea.toFixed(1)), '平均面積 (坪)'),
+                  h('div', { className: 'info-item' }, h('strong', null, (stats.minPrice / 10000).toFixed(2) + '～' + (stats.maxPrice / 10000).toFixed(2) + ' 萬'), '價格區間')
                 )
               ),
 
               h('div', { className: 'kpi-grid' },
-                h('div', { className: 'kpi-card' },
-                  h('div', { className: 'label' }, '總筆數'),
-                  h('div', { className: 'value' }, stats.count)
-                ),
-                h('div', { className: 'kpi-card' },
-                  h('div', { className: 'label' }, '平均總價'),
-                  h('div', { className: 'value' }, (stats.avgPrice / 10000).toFixed(1) + '萬'),
-                  h('div', { className: 'sub' }, '元')
-                ),
-                h('div', { className: 'kpi-card' },
-                  h('div', { className: 'label' }, '中位數'),
-                  h('div', { className: 'value' }, (stats.medianPrice / 10000).toFixed(1) + '萬'),
-                  h('div', { className: 'sub' }, '元')
-                ),
-                h('div', { className: 'kpi-card' },
-                  h('div', { className: 'label' }, '平均單價'),
-                  h('div', { className: 'value' }, stats.avgUnitPrice.toLocaleString()),
-                  h('div', { className: 'sub' }, '元/坪')
-                ),
-                h('div', { className: 'kpi-card' },
-                  h('div', { className: 'label' }, '平均建物面積'),
-                  h('div', { className: 'value' }, stats.avgArea.toFixed(1)),
-                  h('div', { className: 'sub' }, '坪')
-                ),
-                h('div', { className: 'kpi-card' },
-                  h('div', { className: 'label' }, '價格範圍'),
-                  h('div', { className: 'value' }, (stats.minPrice / 10000).toFixed(0) + '～' + (stats.maxPrice / 10000).toFixed(0)),
-                  h('div', { className: 'sub' }, '萬元')
-                )
+                h('div', { className: 'kpi-card' }, h('div', { className: 'label' }, '總筆數'), h('div', { className: 'value' }, stats.count)),
+                h('div', { className: 'kpi-card' }, h('div', { className: 'label' }, '平均總價'), h('div', { className: 'value' }, (stats.avgPrice / 10000).toFixed(1) + '萬'), h('div', { className: 'sub' }, '元')),
+                h('div', { className: 'kpi-card' }, h('div', { className: 'label' }, '中位數'), h('div', { className: 'value' }, (stats.medianPrice / 10000).toFixed(1) + '萬'), h('div', { className: 'sub' }, '元')),
+                h('div', { className: 'kpi-card' }, h('div', { className: 'label' }, '平均單價'), h('div', { className: 'value' }, stats.avgUnitPrice.toLocaleString()), h('div', { className: 'sub' }, '元/坪')),
+                h('div', { className: 'kpi-card' }, h('div', { className: 'label' }, '平均建物面積'), h('div', { className: 'value' }, stats.avgArea.toFixed(1)), h('div', { className: 'sub' }, '坪')),
+                h('div', { className: 'kpi-card' }, h('div', { className: 'label' }, '價格範圍'), h('div', { className: 'value' }, (stats.minPrice / 10000).toFixed(0) + '～' + (stats.maxPrice / 10000).toFixed(0)), h('div', { className: 'sub' }, '萬元'))
               )
             ),
 
@@ -1455,12 +1612,7 @@
                 h('thead', null,
                   h('tr', null,
                     Object.entries(COLUMNS).map(([key, label]) =>
-                      h('th', {
-                        key,
-                        className: 'sortable',
-                        onClick: () => handleSort(label),
-                        style: { cursor: 'pointer' }
-                      }, label)
+                      h('th', { key, className: 'sortable', onClick: () => handleSort(label), style: { cursor: 'pointer' } }, label)
                     )
                   )
                 ),
@@ -1477,17 +1629,9 @@
             ),
 
             h('div', { className: 'pagination' },
-              h('button', {
-                className: 'page-btn',
-                disabled: appState.currentPage === 1,
-                onClick: () => setAppState(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))
-              }, '上一頁'),
+              h('button', { className: 'page-btn', disabled: appState.currentPage === 1, onClick: () => setAppState(prev => ({ ...prev, currentPage: prev.currentPage - 1 })) }, '上一頁'),
               h('span', { style: { padding: '6px 10px' } }, '頁 ' + appState.currentPage + ' / ' + Math.ceil(sortedData.length / appState.pageSize)),
-              h('button', {
-                className: 'page-btn',
-                disabled: appState.currentPage >= Math.ceil(sortedData.length / appState.pageSize),
-                onClick: () => setAppState(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))
-              }, '下一頁')
+              h('button', { className: 'page-btn', disabled: appState.currentPage >= Math.ceil(sortedData.length / appState.pageSize), onClick: () => setAppState(prev => ({ ...prev, currentPage: prev.currentPage + 1 })) }, '下一頁')
             )
           )
         ),
