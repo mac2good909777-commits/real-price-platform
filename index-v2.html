@@ -951,13 +951,28 @@
         });
       }
 
-      // 2. Match districts（鄉鎮市區）
+      // 2. Match districts（鄉鎮市區）— 如果有縣市就在該縣市找；沒有就反查所有縣市
       if (parsed.county) {
         DISTRICTS[parsed.county].forEach(function(d) {
-          // 支援 "北屯區" 或 "北屯"
           if (q.includes(d + '區')) { parsed.districts.push(d); q = q.replace(d + '區', ''); }
           else if (q.includes(d)) { parsed.districts.push(d); q = q.replace(d, ''); }
         });
+      } else {
+        // 反查：從所有縣市的鄉鎮區名中找到匹配，自動推斷縣市
+        Object.keys(DISTRICTS).forEach(function(county) {
+          if (parsed.county) return; // 已找到就跳過
+          DISTRICTS[county].forEach(function(d) {
+            if (parsed.county) return;
+            if (q.includes(d + '區')) {
+              parsed.county = county; parsed.districts.push(d); q = q.replace(d + '區', '');
+            } else if (d.length >= 2 && q.includes(d)) {
+              // 只匹配 2 字以上的區名避免誤判（如「中」「東」）
+              parsed.county = county; parsed.districts.push(d); q = q.replace(d, '');
+            }
+          });
+        });
+      }
+      if (parsed.county) {
         if (parsed.districts.length > 0) parsed.description.push(parsed.county + parsed.districts.join('、'));
         else parsed.description.push(parsed.county + '全區');
       }
@@ -993,14 +1008,14 @@
       });
       if (parsed.targetTypes.length > 0) parsed.description.push('標的: ' + parsed.targetTypes.join('+'));
 
-      // 6. Match building age（屋齡：N年 → 範圍 N×0.6 ~ N）
+      // 6. Match building age（屋齡：N年 → 僅作為參考資訊，不硬篩選）
+      // 因為實價登錄沒有建築完成年欄位，無法精確篩屋齡
       var ageMatch = q.match(/(\d+)\s*年[屋齡]*/);
       if (ageMatch) {
         var age = parseInt(ageMatch[1]);
-        parsed.ageMin = Math.max(0, Math.floor(age * 0.6));
-        parsed.ageMax = age;
+        parsed.ageMin = 0; parsed.ageMax = 999; // 不做硬篩選
         q = q.replace(ageMatch[0], '');
-        parsed.description.push('屋齡' + parsed.ageMin + '~' + parsed.ageMax + '年');
+        parsed.description.push('屋齡約' + age + '年(僅參考)');
       }
 
       // 7. Match area（面積：N坪 → ±30%）
@@ -1120,20 +1135,7 @@
         });
       }
 
-      // Filter by building age（屋齡 = 當前民國年 - 交易年 + 屋齡差）
-      if (parsed.ageMin > 0 || parsed.ageMax < 999) {
-        var latestYear = curYear;
-        result = result.filter(function(row) {
-          var txd = String(row[COLUMNS.txD] || '');
-          if (txd.length < 7) return false;
-          var txYear = parseInt(txd.substring(0, txd.length - 4));
-          // 用交易年份粗估：屋齡 ≈ 查詢年 - 交易年份 (粗估，因為沒有建築完成年欄位)
-          // 更精確方式是 txYear 本身就是交易年，所以篩選交易年範圍
-          var minTxYear = latestYear - parsed.ageMax;
-          var maxTxYear = latestYear - parsed.ageMin;
-          return txYear >= minTxYear && txYear <= maxTxYear;
-        });
-      }
+      // 屋齡：不做硬篩選（實價登錄無建築完成年欄位）
 
       // Filter by address keywords (AND logic)
       if (parsed.addressKeywords.length > 0) {
