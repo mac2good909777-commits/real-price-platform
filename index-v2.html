@@ -253,11 +253,12 @@
       text-align: left; font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap;
     }
     table th:hover { background-color: #2B5937; }
-    table th.sortable:after { content: ' \u2195'; opacity: 0.5; }
+    table th.sortable:after { content: ' \2195'; opacity: 0.5; }
     table tbody tr { border-bottom: 1px solid #E8E8E8; }
     table tbody tr:nth-child(even) { background-color: #f9f9f9; }
     table tbody tr:hover { background-color: #f0f8f0; }
-    table td { padding: 10px 8px; vertical-align: top; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+    table td { padding: 10px 8px; vertical-align: top; max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
+    table td.addr-cell { max-width: 350px; white-space: normal; word-break: break-all; }
 
     .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 16px; }
     .page-btn {
@@ -350,8 +351,8 @@
       { key: 'addr', label: '地址' }, { key: 'txD', label: '交易日期' },
       { key: 'bType', label: '建物型態' }, { key: 'uZone', label: '都市分區' },
       { key: 'nuZone', label: '非都市分區' },
-      { key: 'lArea', label: '土地面積(㎡)' }, { key: 'bArea', label: '建物面積(㎡)' },
-      { key: 'tP', label: '總價(元)' }, { key: 'uP', label: '單價(元/㎡)' },
+      { key: 'lArea', label: '土地面積(坪)' }, { key: 'bArea', label: '建物面積(坪)' },
+      { key: 'tP', label: '總價(萬元)' }, { key: 'uP', label: '單價(萬/坪)' },
       { key: 'note', label: '備註' }
     ];
     var BUILDING_TYPES = [
@@ -1470,8 +1471,17 @@
                 h('tbody', null, paginatedData.map(function(row, idx) {
                   return h('tr', { key: idx }, TABLE_COLS.map(function(col, i) {
                     var val = row[COLUMNS[col.key]] || '';
-                    if (col.key === 'tP' || col.key === 'uP') val = formatNum(val);
-                    return h('td', { key: i }, String(val).substring(0, 80));
+                    if (col.key === 'lArea' || col.key === 'bArea') {
+                      var sqm = parseFloat(val) || 0;
+                      val = sqm > 0 ? sqmToTsubo(sqm).toFixed(2) : '-';
+                    } else if (col.key === 'tP') {
+                      var p = parseFloat(val) || 0;
+                      val = p > 0 ? (Math.round(p / 10000 * 100) / 100).toLocaleString() : '-';
+                    } else if (col.key === 'uP') {
+                      var up = parseFloat(val) || 0;
+                      val = up > 0 ? (Math.round(up * 3.305 / 10000 * 100) / 100).toLocaleString() : '-';
+                    }
+                    return h('td', { key: i, style: col.key === 'addr' ? { maxWidth: '300px', whiteSpace: 'normal' } : null }, String(val));
                   }));
                 }))
               )
