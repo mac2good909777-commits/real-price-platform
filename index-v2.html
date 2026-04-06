@@ -899,44 +899,159 @@
     }
 
     // ========== Natural Language Parser ==========
+    // ========== Smart Search: 自然語言 → 篩選條件翻譯器 ==========
+    // 用途別關鍵字映射（輸入 → 都市分區 + 非都市用地）
+    var LAND_USE_MAP = [
+      { keywords: ['工業用地','工業區','工業'], urbanZone: '工', nonUrbanUse: '丁種建築用地', targetType: '土地' },
+      { keywords: ['住宅用地','住宅區'], urbanZone: '住', nonUrbanUse: '', targetType: '土地' },
+      { keywords: ['商業用地','商業區'], urbanZone: '商', nonUrbanUse: '', targetType: '土地' },
+      { keywords: ['農地','農業用地','農牧用地'], urbanZone: '農', nonUrbanUse: '農牧用地', targetType: '土地' },
+      { keywords: ['甲建','甲種建築'], urbanZone: '', nonUrbanUse: '甲種建築用地', targetType: '土地' },
+      { keywords: ['乙建','乙種建築'], urbanZone: '', nonUrbanUse: '乙種建築用地', targetType: '土地' },
+      { keywords: ['丙建','丙種建築'], urbanZone: '', nonUrbanUse: '丙種建築用地', targetType: '土地' },
+      { keywords: ['丁建','丁種建築'], urbanZone: '', nonUrbanUse: '丁種建築用地', targetType: '土地' }
+    ];
+    // 建物型態關鍵字映射
+    var BTYPE_MAP = [
+      { keywords: ['電梯大樓','電梯','大樓'], btype: '住宅大樓', targetType: '房地' },
+      { keywords: ['華廈'], btype: '華廈', targetType: '房地' },
+      { keywords: ['公寓'], btype: '公寓', targetType: '房地' },
+      { keywords: ['透天','透天厝'], btype: '透天厝', targetType: '房地' },
+      { keywords: ['套房'], btype: '套房', targetType: '房地' },
+      { keywords: ['辦公','商辦','辦公大樓'], btype: '辦公商業大樓', targetType: '房地' },
+      { keywords: ['工廠','廠辦','廠房'], btype: '工廠/廠辦', targetType: '房地' },
+      { keywords: ['農舍'], btype: '農舍', targetType: '房地' }
+    ];
+
     function parseNaturalQuery(query, data) {
       if (!query || !query.trim()) return null;
       var q = query.trim();
-      var parsed = { county: '', districts: [], targetTypes: [], priceMin: 0, priceMax: 9999999, keywords: [] };
+      var parsed = {
+        county: '', districts: [], targetTypes: [],
+        buildingTypes: [],        // 建物型態
+        urbanZones: [],            // 都市分區
+        nonUrbanUses: [],          // 非都市編定
+        priceMin: 0, priceMax: 9999999,
+        landAreaMin: 0, landAreaMax: 9999999,
+        buildAreaMin: 0, buildAreaMax: 9999999,
+        ageMin: 0, ageMax: 999,    // 屋齡範圍（年）
+        addressKeywords: [],       // 地址/路段關鍵字
+        description: []            // 解析說明
+      };
 
-      // Match county
+      // 1. Match county（縣市）
       Object.keys(DISTRICTS).forEach(function(county) {
         if (q.includes(county)) { parsed.county = county; q = q.replace(county, ''); }
       });
-      // Match districts
-      if (parsed.county) {
-        DISTRICTS[parsed.county].forEach(function(d) {
-          if (q.includes(d)) { parsed.districts.push(d); q = q.replace(d, ''); }
+      // 也支援簡稱
+      if (!parsed.county) {
+        var countyAlias = { '台北': '臺北市', '新北': '新北市', '桃園': '桃園市', '台中': '台中市', '台南': '台南市', '高雄': '高雄市' };
+        Object.keys(countyAlias).forEach(function(alias) {
+          if (!parsed.county && q.includes(alias)) { parsed.county = countyAlias[alias]; q = q.replace(alias, ''); }
         });
       }
-      // Match target types
-      ['土地', '建物', '房地', '車位'].forEach(function(t) {
-        if (q.includes(t)) { parsed.targetTypes.push(t); q = q.replace(new RegExp(t, 'g'), ''); }
+
+      // 2. Match districts（鄉鎮市區）
+      if (parsed.county) {
+        DISTRICTS[parsed.county].forEach(function(d) {
+          // 支援 "北屯區" 或 "北屯"
+          if (q.includes(d + '區')) { parsed.districts.push(d); q = q.replace(d + '區', ''); }
+          else if (q.includes(d)) { parsed.districts.push(d); q = q.replace(d, ''); }
+        });
+        if (parsed.districts.length > 0) parsed.description.push(parsed.county + parsed.districts.join('、'));
+        else parsed.description.push(parsed.county + '全區');
+      }
+
+      // 3. Match land use type（用途別 → 都市分區 + 非都市用地）
+      LAND_USE_MAP.forEach(function(mapping) {
+        mapping.keywords.forEach(function(kw) {
+          if (q.includes(kw)) {
+            if (mapping.urbanZone) parsed.urbanZones.push(mapping.urbanZone);
+            if (mapping.nonUrbanUse) parsed.nonUrbanUses.push(mapping.nonUrbanUse);
+            if (mapping.targetType && parsed.targetTypes.indexOf(mapping.targetType) < 0) parsed.targetTypes.push(mapping.targetType);
+            q = q.replace(kw, '');
+            parsed.description.push(kw);
+          }
+        });
       });
-      // Match price patterns
+
+      // 4. Match building type（建物型態）
+      BTYPE_MAP.forEach(function(mapping) {
+        mapping.keywords.forEach(function(kw) {
+          if (q.includes(kw)) {
+            if (parsed.buildingTypes.indexOf(mapping.btype) < 0) parsed.buildingTypes.push(mapping.btype);
+            if (mapping.targetType && parsed.targetTypes.indexOf(mapping.targetType) < 0) parsed.targetTypes.push(mapping.targetType);
+            q = q.replace(kw, '');
+            parsed.description.push(kw);
+          }
+        });
+      });
+
+      // 5. Match explicit target types（明確的交易標的）
+      ['土地', '建物', '房地', '車位'].forEach(function(t) {
+        if (q.includes(t) && parsed.targetTypes.indexOf(t) < 0) { parsed.targetTypes.push(t); q = q.replace(new RegExp(t, 'g'), ''); }
+      });
+      if (parsed.targetTypes.length > 0) parsed.description.push('標的: ' + parsed.targetTypes.join('+'));
+
+      // 6. Match building age（屋齡：N年 → 範圍 N×0.6 ~ N）
+      var ageMatch = q.match(/(\d+)\s*年[屋齡]*/);
+      if (ageMatch) {
+        var age = parseInt(ageMatch[1]);
+        parsed.ageMin = Math.max(0, Math.floor(age * 0.6));
+        parsed.ageMax = age;
+        q = q.replace(ageMatch[0], '');
+        parsed.description.push('屋齡' + parsed.ageMin + '~' + parsed.ageMax + '年');
+      }
+
+      // 7. Match area（面積：N坪 → ±30%）
+      var areaMatch = q.match(/(\d+)\s*坪/);
+      if (areaMatch) {
+        var area = parseInt(areaMatch[1]);
+        var areaMin = Math.floor(area * 0.7);
+        var areaMax = Math.ceil(area * 1.3);
+        // If target is land, set land area; otherwise building area
+        if (parsed.targetTypes.indexOf('土地') >= 0) {
+          parsed.landAreaMin = areaMin; parsed.landAreaMax = areaMax;
+          parsed.description.push('土地面積' + areaMin + '~' + areaMax + '坪');
+        } else {
+          parsed.buildAreaMin = areaMin; parsed.buildAreaMax = areaMax;
+          parsed.description.push('建物面積' + areaMin + '~' + areaMax + '坪');
+        }
+        q = q.replace(areaMatch[0], '');
+      }
+
+      // 8. Match price（價格）
       var priceMatch = q.match(/(\d+)\s*[~～\-到至]\s*(\d+)\s*萬/);
-      if (priceMatch) { parsed.priceMin = parseInt(priceMatch[1]); parsed.priceMax = parseInt(priceMatch[2]); }
+      if (priceMatch) { parsed.priceMin = parseInt(priceMatch[1]); parsed.priceMax = parseInt(priceMatch[2]); parsed.description.push(priceMatch[1] + '~' + priceMatch[2] + '萬'); }
       else {
         var below = q.match(/(\d+)\s*萬以下/);
-        if (below) parsed.priceMax = parseInt(below[1]);
+        if (below) { parsed.priceMax = parseInt(below[1]); parsed.description.push(below[1] + '萬以下'); }
         var above = q.match(/(\d+)\s*萬以上/);
-        if (above) parsed.priceMin = parseInt(above[1]);
+        if (above) { parsed.priceMin = parseInt(above[1]); parsed.description.push(above[1] + '萬以上'); }
         var yi = q.match(/(\d+)\s*億/);
-        if (yi) { var v = parseInt(yi[1]) * 10000; if (q.includes('以上')) parsed.priceMin = v; else if (q.includes('以下')) parsed.priceMax = v; }
+        if (yi) {
+          var v = parseInt(yi[1]) * 10000;
+          if (q.includes('以上')) { parsed.priceMin = v; parsed.description.push(yi[1] + '億以上'); }
+          else if (q.includes('以下')) { parsed.priceMax = v; parsed.description.push(yi[1] + '億以下'); }
+          else { parsed.priceMin = Math.floor(v * 0.7); parsed.priceMax = Math.ceil(v * 1.3); parsed.description.push('約' + yi[1] + '億'); }
+        }
       }
-      // Remaining keywords for address/note matching
-      var remaining = q.replace(/[\d~～\-到至萬億以上以下元坪]/g, '').replace(/\s+/g, ' ').trim();
-      if (remaining) parsed.keywords = remaining.split(/\s+/).filter(function(k) { return k.length >= 2; });
+
+      // 9. Remaining = address/road keywords（剩餘文字視為路段/地址關鍵字）
+      var remaining = q.replace(/[\d~～\-到至萬億以上以下元坪年屋齡區鄰近附近的]/g, '').replace(/\s+/g, ' ').trim();
+      if (remaining) {
+        parsed.addressKeywords = remaining.split(/\s+/).filter(function(k) { return k.length >= 2; });
+        if (parsed.addressKeywords.length > 0) parsed.description.push('路段: ' + parsed.addressKeywords.join('、'));
+      }
+
       return parsed;
     }
 
     function applyNaturalSearch(data, parsed) {
       var result = data.slice();
+      var curYear = getCurrentYear();
+
+      // Filter by county
       if (parsed.county) {
         var allDist = DISTRICTS[parsed.county] || [];
         result = result.filter(function(row) { var d = row[COLUMNS.dist] || ''; return allDist.some(function(dd) { return d.includes(dd); }); });
@@ -944,6 +1059,8 @@
           result = result.filter(function(row) { var d = row[COLUMNS.dist] || ''; return parsed.districts.some(function(dd) { return d.includes(dd); }); });
         }
       }
+
+      // Filter by target type
       if (parsed.targetTypes.length > 0) {
         result = result.filter(function(row) {
           var tgt = (row[COLUMNS.tgt] || '').trim();
@@ -953,23 +1070,84 @@
           });
         });
       }
+
+      // Filter by building type
+      if (parsed.buildingTypes.length > 0) {
+        result = result.filter(function(row) {
+          var bt = (row[COLUMNS.bType] || '');
+          return parsed.buildingTypes.some(function(btype) {
+            var def = BUILDING_TYPES.find(function(b) { return b.keyword === btype; });
+            if (def) return def.keywords.some(function(kw) { return bt.includes(kw); });
+            return bt.includes(btype);
+          });
+        });
+      }
+
+      // Filter by urban zone OR non-urban use (OR logic between 都市 and 非都市)
+      if (parsed.urbanZones.length > 0 || parsed.nonUrbanUses.length > 0) {
+        result = result.filter(function(row) {
+          var uz = (row[COLUMNS.uZone] || '');
+          var nu = (row[COLUMNS.nuUse] || '');
+          var matchUrban = parsed.urbanZones.some(function(z) { return uz.includes(z); });
+          var matchNonUrban = parsed.nonUrbanUses.some(function(u) { return nu.includes(u); });
+          return matchUrban || matchNonUrban;
+        });
+      }
+
+      // Filter by price
       if (parsed.priceMin > 0 || parsed.priceMax < 9999999) {
         result = result.filter(function(row) {
           var pw = (parseFloat(row[COLUMNS.tP]) || 0) / 10000;
           return pw >= parsed.priceMin && pw <= parsed.priceMax;
         });
       }
-      if (parsed.keywords.length > 0) {
+
+      // Filter by land area (坪)
+      if (parsed.landAreaMin > 0 || parsed.landAreaMax < 9999999) {
+        result = result.filter(function(row) {
+          var sqm = parseFloat(row[COLUMNS.lArea]) || 0;
+          var tsubo = sqm * 0.3025;
+          return tsubo >= parsed.landAreaMin && tsubo <= parsed.landAreaMax;
+        });
+      }
+
+      // Filter by building area (坪)
+      if (parsed.buildAreaMin > 0 || parsed.buildAreaMax < 9999999) {
+        result = result.filter(function(row) {
+          var sqm = parseFloat(row[COLUMNS.bArea]) || 0;
+          var tsubo = sqm * 0.3025;
+          return tsubo >= parsed.buildAreaMin && tsubo <= parsed.buildAreaMax;
+        });
+      }
+
+      // Filter by building age（屋齡 = 當前民國年 - 交易年 + 屋齡差）
+      if (parsed.ageMin > 0 || parsed.ageMax < 999) {
+        var latestYear = curYear;
+        result = result.filter(function(row) {
+          var txd = String(row[COLUMNS.txD] || '');
+          if (txd.length < 7) return false;
+          var txYear = parseInt(txd.substring(0, txd.length - 4));
+          // 用交易年份粗估：屋齡 ≈ 查詢年 - 交易年份 (粗估，因為沒有建築完成年欄位)
+          // 更精確方式是 txYear 本身就是交易年，所以篩選交易年範圍
+          var minTxYear = latestYear - parsed.ageMax;
+          var maxTxYear = latestYear - parsed.ageMin;
+          return txYear >= minTxYear && txYear <= maxTxYear;
+        });
+      }
+
+      // Filter by address keywords (AND logic)
+      if (parsed.addressKeywords.length > 0) {
         result = result.filter(function(row) {
           var addr = (row[COLUMNS.addr] || '').toLowerCase();
           var note = (row[COLUMNS.note] || '').toLowerCase();
           var dist = (row[COLUMNS.dist] || '').toLowerCase();
-          return parsed.keywords.some(function(kw) {
-            var kwl = kw.toLowerCase();
-            return addr.includes(kwl) || note.includes(kwl) || dist.includes(kwl);
+          var combined = addr + ' ' + note + ' ' + dist;
+          return parsed.addressKeywords.every(function(kw) {
+            return combined.includes(kw.toLowerCase());
           });
         });
       }
+
       return result;
     }
 
@@ -1074,21 +1252,24 @@
         var baseData = appState.data;
         var searchInfo = '';
 
-        // Step 1: Apply search mode pre-filter
+        // Step 1: Apply search mode pre-filter (smart translator)
         if (appState.searchMode === 'natural' && appState.naturalQuery.trim()) {
           var parsed = parseNaturalQuery(appState.naturalQuery, baseData);
           if (parsed) {
             baseData = applyNaturalSearch(baseData, parsed);
-            var parts = [];
-            if (parsed.county) parts.push(parsed.county + (parsed.districts.length > 0 ? '(' + parsed.districts.join('、') + ')' : ''));
-            if (parsed.targetTypes.length > 0) parts.push(parsed.targetTypes.join('+'));
-            if (parsed.priceMin > 0 || parsed.priceMax < 9999999) parts.push(formatPrice(parsed.priceMin) + '~' + formatPrice(parsed.priceMax));
-            if (parsed.keywords.length > 0) parts.push('關鍵字: ' + parsed.keywords.join('、'));
-            searchInfo = '自然語言解析: ' + parts.join(' | ') + ' → ' + baseData.length + ' 筆';
+            searchInfo = '解析: ' + (parsed.description.length > 0 ? parsed.description.join(' | ') : '(無條件)') + ' → ' + baseData.length + ' 筆';
+            console.log('[Smart Search]', JSON.stringify(parsed));
           }
         } else if (appState.searchMode === 'address' && appState.addressQuery.trim()) {
-          baseData = searchByAddress(baseData, appState.addressQuery);
-          searchInfo = '地址搜尋「' + appState.addressQuery + '」→ ' + baseData.length + ' 筆';
+          // Address mode: also run through smart parser for district/road detection
+          var addrParsed = parseNaturalQuery(appState.addressQuery, baseData);
+          if (addrParsed && (addrParsed.county || addrParsed.addressKeywords.length > 0)) {
+            baseData = applyNaturalSearch(baseData, addrParsed);
+            searchInfo = '地址解析: ' + addrParsed.description.join(' | ') + ' → ' + baseData.length + ' 筆';
+          } else {
+            baseData = searchByAddress(baseData, appState.addressQuery);
+            searchInfo = '地址搜尋「' + appState.addressQuery + '」→ ' + baseData.length + ' 筆';
+          }
         }
 
         // Step 2: Apply condition filters on top
