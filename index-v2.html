@@ -1005,7 +1005,7 @@
         searchMode: 'conditions', naturalQuery: '', addressQuery: '',
         currentPage: 1, pageSize: 50,
         sortBy: null, sortDesc: false,
-        uploadStatus: '', message: '', messageType: '', debugInfo: null,
+        uploadStatus: '', message: '', messageType: '',
         analysisKey: 0
       });
       var appState = _appState[0], setAppState = _appState[1];
@@ -1045,27 +1045,22 @@
         for (var i = 0; i < files.length; i++) processFile(files[i]);
       };
       var finishUpload = function(allData) {
-        // Debug: 收集欄位名稱和前 3 筆地址欄位
-        var _debugInfo = null;
+        // Debug: console.log 欄位名稱和前 3 筆地址
         if (allData.length > 0) {
           var colNames = Object.keys(allData[0]);
           var addrCols = colNames.filter(function(c) { return c.includes('位置') || c.includes('門牌') || c.includes('地址') || c.includes('地號') || c.includes('土地') || c.includes('建物'); });
-          var sampleRows = [];
-          for (var di = 0; di < Math.min(3, allData.length); di++) {
-            var row = {};
-            addrCols.forEach(function(c) { row[c] = allData[di][c]; });
-            sampleRows.push(row);
-          }
-          _debugInfo = { allCols: colNames, addrCols: addrCols, samples: sampleRows };
-          console.log('[DEBUG] 全部欄位:', colNames);
+          console.log('[DEBUG] 全部欄位 (' + colNames.length + '個):', colNames);
           console.log('[DEBUG] 地址相關欄位:', addrCols);
-          console.log('[DEBUG] 前3筆:', sampleRows);
+          for (var di = 0; di < Math.min(3, allData.length); di++) {
+            var debugRow = {};
+            addrCols.forEach(function(c) { debugRow[c] = allData[di][c]; });
+            console.log('[DEBUG] Row ' + di + ':', JSON.stringify(debugRow));
+          }
         }
         setAppState(function(p) { return Object.assign({}, p, {
           data: allData, filteredData: [], lastDiag: [],
           message: allData.length > 0 ? '成功上傳 ' + allData.length + ' 筆有效資料（已快取）' : '讀取到 0 筆有效資料',
-          messageType: allData.length > 0 ? 'success' : 'error', uploadStatus: 'done', currentPage: 1,
-          debugInfo: _debugInfo
+          messageType: allData.length > 0 ? 'success' : 'error', uploadStatus: 'done', currentPage: 1
         }); });
         if (allData.length > 0) saveDataToDB(allData).catch(function(err) { console.error('IndexedDB save error:', err); });
       };
@@ -1470,19 +1465,6 @@
               appState.data.length > 0 && h('button', { className: 'btn btn-danger',
                 onClick: function() { clearDB().then(function() { setAppState(function(p) { return Object.assign({}, p, { data: [], filteredData: [], lastDiag: [], message: '已清除快取', messageType: 'info', uploadStatus: '' }); }); }); }
               }, '清除快取')
-            ),
-            // Debug panel: 顯示欄位資訊
-            appState.debugInfo && h('div', { style: { marginTop: '16px', padding: '16px', background: '#FFF8E1', border: '1px solid #FFE082', borderRadius: '8px', fontSize: '12px' } },
-              h('h4', { style: { color: '#F57F17', marginBottom: '8px' } }, 'DEBUG: 資料欄位檢查'),
-              h('p', null, h('strong', null, '全部欄位 (' + appState.debugInfo.allCols.length + '個): '), appState.debugInfo.allCols.join(' | ')),
-              h('p', { style: { marginTop: '8px' } }, h('strong', null, '地址相關欄位: '), appState.debugInfo.addrCols.join(' | ')),
-              h('div', { style: { marginTop: '8px' } },
-                h('strong', null, '前 3 筆地址欄位原始值:'),
-                appState.debugInfo.samples.map(function(s, i) {
-                  return h('pre', { key: i, style: { background: '#fff', padding: '8px', margin: '4px 0', borderRadius: '4px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' } },
-                    JSON.stringify(s, null, 2));
-                })
-              )
             )
           ),
 
