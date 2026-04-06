@@ -1001,8 +1001,8 @@
         priceMin: 0, priceMax: 9999999, activePriceRanges: [],
         areaMin: 0, areaMax: 9999999, activeAreaRanges: [],
         landAreaMin: 0, landAreaMax: 9999999, activeLandAreaRanges: [],
-        showAdvanced: false,
-        searchMode: 'conditions', naturalQuery: '', addressQuery: '',
+        showAdvanced: false, filtersExpanded: false,
+        searchMode: 'natural', naturalQuery: '', addressQuery: '',
         currentPage: 1, pageSize: 50,
         sortBy: null, sortDesc: false,
         uploadStatus: '', message: '', messageType: '',
@@ -1228,196 +1228,213 @@
         ),
         h('div', { className: 'container' },
 
-          // ===== 1. Search Section (top) =====
+          // ===== 1. Upload (always visible, always on top) =====
+          h('div', { className: 'section' },
+            h('h2', null, '資料上傳'),
+            appState.message && h('div', { className: 'message message-' + appState.messageType }, appState.message),
+            h('div', { className: 'upload-area', onDragOver: handleDragOver, onDragLeave: handleDragLeave, onDrop: handleDrop,
+              onClick: function() { document.getElementById('fileInput').click(); } },
+              h('div', { className: 'icon' }, '\uD83D\uDCC1'),
+              h('p', null, '拖放 Excel 檔案或點擊選擇'),
+              h('p', null, '支援 .xlsx / .xls 多檔上傳')
+            ),
+            h('div', { className: 'upload-btns' },
+              h('input', { id: 'fileInput', type: 'file', multiple: true, accept: '.xlsx,.xls',
+                onChange: function(e) { handleFileUpload(e); e.target.value = ''; } }),
+              h('button', { className: 'btn btn-primary', onClick: function() { document.getElementById('fileInput').click(); } }, '選擇檔案'),
+              appState.data.length > 0 && h('button', { className: 'btn btn-secondary' }, '已載入: ' + formatNum(appState.data.length) + ' 筆'),
+              appState.data.length > 0 && h('button', { className: 'btn btn-danger',
+                onClick: function() { clearDB().then(function() { setAppState(function(p) { return Object.assign({}, p, { data: [], filteredData: [], lastDiag: [], message: '已清除快取', messageType: 'info', uploadStatus: '' }); }); }); }
+              }, '清除快取')
+            )
+          ),
+
+          // ===== 2. Search Section (collapsible) =====
           appState.data.length > 0 && h('div', { className: 'section' },
-            h('h2', null, '資料搜尋'),
-
-            // Search mode tabs
-            h('div', { className: 'search-mode-tabs' },
-              h('button', { className: 'search-mode-tab ' + (appState.searchMode === 'natural' ? 'active' : ''), onClick: function() { setSearchMode('natural'); } }, '自然語言查詢'),
-              h('button', { className: 'search-mode-tab ' + (appState.searchMode === 'address' ? 'active' : ''), onClick: function() { setSearchMode('address'); } }, '地址搜尋'),
-              h('button', { className: 'search-mode-tab ' + (appState.searchMode === 'conditions' ? 'active' : ''), onClick: function() { setSearchMode('conditions'); } }, '查詢條件')
+            h('h2', { style: { cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+              onClick: function() { setAppState(function(p) { return Object.assign({}, p, { filtersExpanded: !p.filtersExpanded }); }); }
+            },
+              h('span', null, '資料搜尋'),
+              h('span', { style: { fontSize: '14px', fontWeight: '400', color: '#888' } },
+                appState.filtersExpanded ? '\u25B2 收合' : '\u25BC 展開搜尋條件'),
+              appState.data.length > 0 && h('span', { style: { fontSize: '12px', fontWeight: '400', color: '#999' } },
+                '(' + formatNum(appState.data.length) + ' 筆資料可查詢)')
             ),
 
-            // Natural language input
-            appState.searchMode === 'natural' && h('div', { className: 'search-input-box' },
-              h('input', { type: 'text', value: appState.naturalQuery,
-                onChange: function(e) { setAppState(function(p) { return Object.assign({}, p, { naturalQuery: e.target.value }); }); },
-                placeholder: '輸入自然語言查詢，例: 台中市龍井區的工業用地 1000~5000萬',
-                onKeyDown: function(e) { if (e.key === 'Enter') applyFilters(); }
-              }),
-              h('div', { className: 'search-hint' },
-                h('strong', null, '支援格式：'), '縣市 + 鄉鎮 + 標的類型 + 價格範圍 + 關鍵字',
-                h('br'), '範例：「台北市中山區 土地 500~1000萬」「台中市 工廠 3億以上」「新北市 房地 南京東路」'
+            // Compact search bar (always visible)
+            h('div', { className: 'search-input-box', style: { marginTop: '12px' } },
+              h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+                h('input', { type: 'text', style: { flex: 1 },
+                  value: appState.searchMode === 'address' ? appState.addressQuery : appState.naturalQuery,
+                  onChange: function(e) {
+                    var val = e.target.value;
+                    setAppState(function(p) {
+                      return Object.assign({}, p, p.searchMode === 'address' ? { addressQuery: val } : { naturalQuery: val });
+                    });
+                  },
+                  placeholder: appState.searchMode === 'address' ? '輸入地址關鍵字，例: 南京東路、中港路' : '輸入查詢，例: 台中市龍井區 工業用地 1000~5000萬',
+                  onKeyDown: function(e) { if (e.key === 'Enter') applyFilters(); }
+                }),
+                h('button', { className: 'btn btn-primary', onClick: applyFilters, style: { whiteSpace: 'nowrap' } }, '查詢')
+              ),
+              h('div', { style: { display: 'flex', gap: '12px', marginTop: '8px', fontSize: '12px' } },
+                h('label', { style: { cursor: 'pointer', color: appState.searchMode === 'natural' ? '#4B872F' : '#888' } },
+                  h('input', { type: 'radio', name: 'smode', checked: appState.searchMode === 'natural', onChange: function() { setSearchMode('natural'); }, style: { marginRight: '4px' } }), '自然語言'),
+                h('label', { style: { cursor: 'pointer', color: appState.searchMode === 'address' ? '#4B872F' : '#888' } },
+                  h('input', { type: 'radio', name: 'smode', checked: appState.searchMode === 'address', onChange: function() { setSearchMode('address'); }, style: { marginRight: '4px' } }), '地址搜尋'),
+                activeFilters.length > 0 && h('span', { style: { color: '#666' } }, '已套用: ',
+                  activeFilters.map(function(f) { return h('span', { key: f, className: 'filter-badge' }, f); })),
+                h('button', { className: 'btn btn-danger', onClick: resetFilters, style: { marginLeft: 'auto', padding: '4px 10px', fontSize: '11px' } }, '重設')
               )
             ),
 
-            // Address search input
-            appState.searchMode === 'address' && h('div', { className: 'search-input-box' },
-              h('input', { type: 'text', value: appState.addressQuery,
-                onChange: function(e) { setAppState(function(p) { return Object.assign({}, p, { addressQuery: e.target.value }); }); },
-                placeholder: '輸入地址關鍵字，例: 南京東路、中港路、工業區',
-                onKeyDown: function(e) { if (e.key === 'Enter') applyFilters(); }
-              }),
-              h('div', { className: 'search-hint' },
-                h('strong', null, '支援格式：'), '路段名稱、地段名稱、門牌號碼等',
-                h('br'), '多個關鍵字以空格分隔，將以 AND 邏輯搜尋（全部符合才列出）'
-              )
-            ),
+            // Expanded filters panel
+            appState.filtersExpanded && h('div', { style: { marginTop: '16px' } },
 
-            // Condition filters (always visible, can combine with natural/address search)
-            (appState.searchMode === 'conditions' || appState.searchMode === 'natural' || appState.searchMode === 'address') && h('div', null,
-              appState.searchMode !== 'conditions' && h('div', { className: 'advanced-toggle', onClick: function() { setAppState(function(p) { return Object.assign({}, p, { showAdvanced: !p.showAdvanced }); }); } },
-                (appState.showAdvanced ? '\u25BC' : '\u25B6') + ' 展開查詢條件（可搭配使用）'),
-
-              (appState.searchMode === 'conditions' || appState.showAdvanced) && h('div', null,
-
-                // ① 區域
-                h('div', { className: 'filter-group' },
-                  h('label', { className: 'filter-label' }, '① 區域'),
+              // ① 區域
+              h('div', { className: 'filter-group' },
+                h('label', { className: 'filter-label' }, '① 區域'),
+                h('div', { className: 'chip-wrap' },
+                  Object.keys(DISTRICTS).map(function(county) {
+                    return h('button', { key: county, className: 'chip ' + (appState.selectedCounty === county ? 'active' : ''), onClick: function() { toggleCounty(county); } }, county);
+                  })
+                ),
+                appState.selectedCounty && h('div', { style: { marginTop: '8px' } },
+                  h('p', { style: { fontSize: '12px', color: '#888', marginBottom: '6px' } },
+                    '鄉鎮市區（可複選，未選則查詢' + appState.selectedCounty + '全區）'),
                   h('div', { className: 'chip-wrap' },
-                    Object.keys(DISTRICTS).map(function(county) {
-                      return h('button', { key: county, className: 'chip ' + (appState.selectedCounty === county ? 'active' : ''), onClick: function() { toggleCounty(county); } }, county);
+                    hasDistricts.map(function(d) {
+                      return h('button', { key: d, className: 'chip sub-group ' + (appState.selectedDistricts.includes(d) ? 'active' : ''), onClick: function() { toggleDistrict(d); } }, d);
                     })
                   ),
-                  appState.selectedCounty && h('div', { style: { marginTop: '8px' } },
-                    h('p', { style: { fontSize: '12px', color: '#888', marginBottom: '6px' } },
-                      '鄉鎮市區（可複選，未選則查詢' + appState.selectedCounty + '全區）'),
-                    h('div', { className: 'chip-wrap' },
-                      hasDistricts.map(function(d) {
-                        return h('button', { key: d, className: 'chip sub-group ' + (appState.selectedDistricts.includes(d) ? 'active' : ''), onClick: function() { toggleDistrict(d); } }, d);
-                      })
-                    ),
-                    appState.selectedDistricts.length > 0 && h('p', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } },
-                      '已選: ' + appState.selectedDistricts.join('、'))
+                  appState.selectedDistricts.length > 0 && h('p', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } },
+                    '已選: ' + appState.selectedDistricts.join('、'))
+                )
+              ),
+
+              // ② 標的（複選）
+              h('div', { className: 'filter-group' },
+                h('label', { className: 'filter-label' }, '② 交易標的（可複選）'),
+                h('div', { className: 'chip-wrap' },
+                  ['土地', '建物', '房地', '車位'].map(function(type) {
+                    return h('button', { key: type, className: 'chip ' + (types.includes(type) ? 'active' : ''), onClick: function() { toggleTargetType(type); } }, type);
+                  })
+                ),
+                hasBuildingType && h('div', { style: { marginTop: '8px' } },
+                  h('p', { style: { fontSize: '12px', color: '#888', marginBottom: '6px' } }, '建物型態（可複選）'),
+                  h('div', { className: 'chip-wrap' },
+                    BUILDING_TYPES.map(function(bt) {
+                      return h('button', { key: bt.keyword, className: 'chip sub-group ' + (appState.selectedBuildingTypes.some(function(b) { return b.keyword === bt.keyword; }) ? 'active' : ''), onClick: function() { toggleBuildingType(bt); } }, bt.label);
+                    })
                   )
                 ),
-
-                // ② 標的（複選）
-                h('div', { className: 'filter-group' },
-                  h('label', { className: 'filter-label' }, '② 交易標的（可複選）'),
-                  h('div', { className: 'chip-wrap' },
-                    ['土地', '建物', '房地', '車位'].map(function(type) {
-                      return h('button', { key: type, className: 'chip ' + (types.includes(type) ? 'active' : ''), onClick: function() { toggleTargetType(type); } }, type);
-                    })
+                hasLandType && h('div', { style: { marginTop: '12px' } },
+                  h('p', { style: { fontSize: '12px', color: '#888', marginBottom: '6px' } }, '土地分類（可複選）'),
+                  h('div', { className: 'land-type-wrap' },
+                    h('button', { className: 'land-type-chip ' + (appState.landTypeFilter.includes('urban') ? 'active' : ''), onClick: function() { toggleLandType('urban'); } },
+                      h('span', { className: 'check-icon' }, appState.landTypeFilter.includes('urban') ? '\u2713' : ''), '都市土地'),
+                    h('button', { className: 'land-type-chip ' + (appState.landTypeFilter.includes('nonurban') ? 'active' : ''), onClick: function() { toggleLandType('nonurban'); } },
+                      h('span', { className: 'check-icon' }, appState.landTypeFilter.includes('nonurban') ? '\u2713' : ''), '非都市土地')
                   ),
-                  hasBuildingType && h('div', { style: { marginTop: '8px' } },
-                    h('p', { style: { fontSize: '12px', color: '#888', marginBottom: '6px' } }, '建物型態（可複選）'),
-                    h('div', { className: 'chip-wrap' },
-                      BUILDING_TYPES.map(function(bt) {
-                        return h('button', { key: bt.keyword, className: 'chip sub-group ' + (appState.selectedBuildingTypes.some(function(b) { return b.keyword === bt.keyword; }) ? 'active' : ''), onClick: function() { toggleBuildingType(bt); } }, bt.label);
-                      })
-                    )
+                  appState.landTypeFilter.includes('urban') && h('div', { className: 'sub-filter-section' },
+                    h('div', { className: 'sub-filter-title' }, '都市土地使用分區'),
+                    h('div', { className: 'chip-wrap' }, URBAN_ZONES.map(function(uz) {
+                      return h('button', { key: uz.keyword, className: 'chip sub-group ' + (appState.selectedUrbanZones.some(function(u) { return u.keyword === uz.keyword; }) ? 'active' : ''), onClick: function() { toggleUrbanZone(uz); } }, uz.label);
+                    }))
                   ),
-                  hasLandType && h('div', { style: { marginTop: '12px' } },
-                    h('p', { style: { fontSize: '12px', color: '#888', marginBottom: '6px' } }, '土地分類（可複選）'),
-                    h('div', { className: 'land-type-wrap' },
-                      h('button', { className: 'land-type-chip ' + (appState.landTypeFilter.includes('urban') ? 'active' : ''), onClick: function() { toggleLandType('urban'); } },
-                        h('span', { className: 'check-icon' }, appState.landTypeFilter.includes('urban') ? '\u2713' : ''), '都市土地'),
-                      h('button', { className: 'land-type-chip ' + (appState.landTypeFilter.includes('nonurban') ? 'active' : ''), onClick: function() { toggleLandType('nonurban'); } },
-                        h('span', { className: 'check-icon' }, appState.landTypeFilter.includes('nonurban') ? '\u2713' : ''), '非都市土地')
-                    ),
-                    appState.landTypeFilter.includes('urban') && h('div', { className: 'sub-filter-section' },
-                      h('div', { className: 'sub-filter-title' }, '都市土地使用分區'),
-                      h('div', { className: 'chip-wrap' }, URBAN_ZONES.map(function(uz) {
-                        return h('button', { key: uz.keyword, className: 'chip sub-group ' + (appState.selectedUrbanZones.some(function(u) { return u.keyword === uz.keyword; }) ? 'active' : ''), onClick: function() { toggleUrbanZone(uz); } }, uz.label);
-                      }))
-                    ),
-                    appState.landTypeFilter.includes('nonurban') && h('div', { className: 'sub-filter-section', style: { marginTop: '8px' } },
-                      h('div', { className: 'sub-filter-title' }, '非都市土地使用分區'),
-                      h('div', { className: 'chip-wrap' }, NON_URBAN_ZONES.map(function(zone) {
-                        return h('button', { key: zone, className: 'chip sub-group ' + (appState.selectedNonUrbanZones.includes(zone) ? 'active' : ''), onClick: function() { toggleNonUrbanZone(zone); } }, zone);
-                      })),
-                      h('div', { className: 'sub-filter-title', style: { marginTop: '8px' } }, '非都市土地使用編定'),
-                      h('div', { className: 'chip-wrap' }, NON_URBAN_USES.map(function(use) {
-                        return h('button', { key: use, className: 'chip sub-group ' + (appState.selectedNonUrbanUses.includes(use) ? 'active' : ''), onClick: function() { toggleNonUrbanUse(use); } }, use);
-                      }))
-                    )
-                  )
-                ),
-
-                // ===== 兩欄佈局 =====
-                h('div', { className: 'filter-grid-2col' },
-                  // ③ 查詢期間
-                  h('div', { className: 'filter-group' },
-                    h('label', { className: 'filter-label' }, '③ 查詢期間（民國年）'),
-                    h(YearRangeSlider, {
-                      minYear: MIN_YEAR, maxYear: getCurrentYear(),
-                      valueMin: appState.startYear, valueMax: appState.endYear,
-                      onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { startYear: v }); }); },
-                      onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { endYear: v }); }); }
-                    })
-                  ),
-                  // ④ 總價（複選快速按鈕）
-                  h('div', { className: 'filter-group' },
-                    h('label', { className: 'filter-label' }, '④ 總價範圍（萬元，可複選）'),
-                    h('div', { className: 'chip-wrap' },
-                      PRICE_RANGES.map(function(range) {
-                        return h('button', { key: range.label,
-                          className: 'quick-btn ' + (appState.activePriceRanges.indexOf(range.label) >= 0 ? 'active' : ''),
-                          onClick: function() { togglePriceRange(range); } }, range.label);
-                      })
-                    ),
-                    h(RangeSlider, {
-                      steps: PRICE_STEPS, valueMin: appState.priceMin, valueMax: appState.priceMax,
-                      unit: '萬', formatFn: formatPrice,
-                      onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { priceMin: v, activePriceRanges: [] }); }); },
-                      onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { priceMax: v, activePriceRanges: [] }); }); }
-                    })
-                  ),
-                  // ⑤ 土地面積（複選快速按鈕）
-                  !isBuildingOnly && h('div', { className: 'filter-group' },
-                    h('label', { className: 'filter-label' }, '⑤ 土地面積（坪，可複選）'),
-                    h('div', { className: 'chip-wrap' },
-                      AREA_RANGES.map(function(range) {
-                        return h('button', { key: 'la-' + range.label,
-                          className: 'quick-btn ' + (appState.activeLandAreaRanges.indexOf(range.label) >= 0 ? 'active' : ''),
-                          onClick: function() { toggleLandAreaRange(range); } }, range.label);
-                      })
-                    ),
-                    h(RangeSlider, {
-                      steps: AREA_STEPS, valueMin: appState.landAreaMin, valueMax: appState.landAreaMax,
-                      unit: '坪', formatFn: formatArea,
-                      onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { landAreaMin: v, activeLandAreaRanges: [] }); }); },
-                      onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { landAreaMax: v, activeLandAreaRanges: [] }); }); }
-                    })
-                  ),
-                  // ⑥ 建物面積（複選快速按鈕）
-                  !isLandOnly && h('div', { className: 'filter-group' },
-                    h('label', { className: 'filter-label' }, (isBuildingOnly ? '⑤' : '⑥') + ' 建物面積（坪，可複選）'),
-                    h('div', { className: 'chip-wrap' },
-                      AREA_RANGES.map(function(range) {
-                        return h('button', { key: 'ba-' + range.label,
-                          className: 'quick-btn ' + (appState.activeAreaRanges.indexOf(range.label) >= 0 ? 'active' : ''),
-                          onClick: function() { toggleAreaRange(range); } }, range.label);
-                      })
-                    ),
-                    h(RangeSlider, {
-                      steps: AREA_STEPS, valueMin: appState.areaMin, valueMax: appState.areaMax,
-                      unit: '坪', formatFn: formatArea,
-                      onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { areaMin: v, activeAreaRanges: [] }); }); },
-                      onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { areaMax: v, activeAreaRanges: [] }); }); }
-                    })
+                  appState.landTypeFilter.includes('nonurban') && h('div', { className: 'sub-filter-section', style: { marginTop: '8px' } },
+                    h('div', { className: 'sub-filter-title' }, '非都市土地使用分區'),
+                    h('div', { className: 'chip-wrap' }, NON_URBAN_ZONES.map(function(zone) {
+                      return h('button', { key: zone, className: 'chip sub-group ' + (appState.selectedNonUrbanZones.includes(zone) ? 'active' : ''), onClick: function() { toggleNonUrbanZone(zone); } }, zone);
+                    })),
+                    h('div', { className: 'sub-filter-title', style: { marginTop: '8px' } }, '非都市土地使用編定'),
+                    h('div', { className: 'chip-wrap' }, NON_URBAN_USES.map(function(use) {
+                      return h('button', { key: use, className: 'chip sub-group ' + (appState.selectedNonUrbanUses.includes(use) ? 'active' : ''), onClick: function() { toggleNonUrbanUse(use); } }, use);
+                    }))
                   )
                 )
-              )
-            ),
-
-            // Action bar
-            h('div', { className: 'action-bar' },
-              appState.message && h('div', { className: 'message message-' + appState.messageType, style: { flex: '1 1 100%', marginBottom: '8px' } }, appState.message),
-              h('div', { className: 'filter-summary' },
-                activeFilters.length > 0
-                  ? h('span', null, '已套用: ', activeFilters.map(function(f) { return h('span', { key: f, className: 'filter-badge' }, f); }))
-                  : h('span', { style: { color: '#999' } }, '尚未設定篩選條件（將查詢全部資料）')
               ),
-              h('button', { className: 'btn btn-primary', onClick: applyFilters, style: { fontSize: '16px', padding: '12px 40px' } }, '查詢'),
-              h('button', { className: 'btn btn-danger', onClick: resetFilters }, '重設條件')
+
+              // ===== 兩欄佈局 =====
+              h('div', { className: 'filter-grid-2col' },
+                // ③ 查詢期間
+                h('div', { className: 'filter-group' },
+                  h('label', { className: 'filter-label' }, '③ 查詢期間（民國年）'),
+                  h(YearRangeSlider, {
+                    minYear: MIN_YEAR, maxYear: getCurrentYear(),
+                    valueMin: appState.startYear, valueMax: appState.endYear,
+                    onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { startYear: v }); }); },
+                    onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { endYear: v }); }); }
+                  })
+                ),
+                // ④ 總價（複選快速按鈕）
+                h('div', { className: 'filter-group' },
+                  h('label', { className: 'filter-label' }, '④ 總價範圍（萬元，可複選）'),
+                  h('div', { className: 'chip-wrap' },
+                    PRICE_RANGES.map(function(range) {
+                      return h('button', { key: range.label,
+                        className: 'quick-btn ' + (appState.activePriceRanges.indexOf(range.label) >= 0 ? 'active' : ''),
+                        onClick: function() { togglePriceRange(range); } }, range.label);
+                    })
+                  ),
+                  h(RangeSlider, {
+                    steps: PRICE_STEPS, valueMin: appState.priceMin, valueMax: appState.priceMax,
+                    unit: '萬', formatFn: formatPrice,
+                    onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { priceMin: v, activePriceRanges: [] }); }); },
+                    onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { priceMax: v, activePriceRanges: [] }); }); }
+                  })
+                ),
+                // ⑤ 土地面積（複選快速按鈕）
+                !isBuildingOnly && h('div', { className: 'filter-group' },
+                  h('label', { className: 'filter-label' }, '⑤ 土地面積（坪，可複選）'),
+                  h('div', { className: 'chip-wrap' },
+                    AREA_RANGES.map(function(range) {
+                      return h('button', { key: 'la-' + range.label,
+                        className: 'quick-btn ' + (appState.activeLandAreaRanges.indexOf(range.label) >= 0 ? 'active' : ''),
+                        onClick: function() { toggleLandAreaRange(range); } }, range.label);
+                    })
+                  ),
+                  h(RangeSlider, {
+                    steps: AREA_STEPS, valueMin: appState.landAreaMin, valueMax: appState.landAreaMax,
+                    unit: '坪', formatFn: formatArea,
+                    onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { landAreaMin: v, activeLandAreaRanges: [] }); }); },
+                    onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { landAreaMax: v, activeLandAreaRanges: [] }); }); }
+                  })
+                ),
+                // ⑥ 建物面積（複選快速按鈕）
+                !isLandOnly && h('div', { className: 'filter-group' },
+                  h('label', { className: 'filter-label' }, (isBuildingOnly ? '⑤' : '⑥') + ' 建物面積（坪，可複選）'),
+                  h('div', { className: 'chip-wrap' },
+                    AREA_RANGES.map(function(range) {
+                      return h('button', { key: 'ba-' + range.label,
+                        className: 'quick-btn ' + (appState.activeAreaRanges.indexOf(range.label) >= 0 ? 'active' : ''),
+                        onClick: function() { toggleAreaRange(range); } }, range.label);
+                    })
+                  ),
+                  h(RangeSlider, {
+                    steps: AREA_STEPS, valueMin: appState.areaMin, valueMax: appState.areaMax,
+                    unit: '坪', formatFn: formatArea,
+                    onChangeMin: function(v) { setAppState(function(p) { return Object.assign({}, p, { areaMin: v, activeAreaRanges: [] }); }); },
+                    onChangeMax: function(v) { setAppState(function(p) { return Object.assign({}, p, { areaMax: v, activeAreaRanges: [] }); }); }
+                  })
+                )
+              ),
+
+              // Action bar inside expanded panel
+              h('div', { className: 'action-bar' },
+                h('div', { className: 'filter-summary' },
+                  activeFilters.length > 0
+                    ? h('span', null, '已套用: ', activeFilters.map(function(f) { return h('span', { key: f, className: 'filter-badge' }, f); }))
+                    : h('span', { style: { color: '#999' } }, '尚未設定篩選條件（將查詢全部資料）')
+                ),
+                h('button', { className: 'btn btn-primary', onClick: applyFilters, style: { fontSize: '16px', padding: '12px 40px' } }, '查詢'),
+                h('button', { className: 'btn btn-danger', onClick: resetFilters }, '重設條件')
+              )
             ),
             appState.lastDiag.length > 0 && appState.filteredData.length === 0 && h(DiagPanel, { diag: appState.lastDiag })
           ),
 
-          // ===== 2. Results: KPI + Analytics =====
+          // ===== 3. Results: KPI + Analytics =====
           showResults && h('div', { className: 'section' },
             h('h2', null, '查詢結果'),
 
@@ -1445,27 +1462,6 @@
 
             // 數據分析
             h(AnalyticsSection, { key: 'a-' + appState.analysisKey, data: appState.filteredData })
-          ),
-
-          // ===== 3. Upload (between analytics and table) =====
-          h('div', { className: 'section' },
-            h('h2', null, '資料上傳'),
-            !showResults && appState.message && h('div', { className: 'message message-' + appState.messageType }, appState.message),
-            h('div', { className: 'upload-area', onDragOver: handleDragOver, onDragLeave: handleDragLeave, onDrop: handleDrop,
-              onClick: function() { document.getElementById('fileInput').click(); } },
-              h('div', { className: 'icon' }, '\uD83D\uDCC1'),
-              h('p', null, '拖放 Excel 檔案或點擊選擇'),
-              h('p', null, '支援 .xlsx / .xls 多檔上傳')
-            ),
-            h('div', { className: 'upload-btns' },
-              h('input', { id: 'fileInput', type: 'file', multiple: true, accept: '.xlsx,.xls',
-                onChange: function(e) { handleFileUpload(e); e.target.value = ''; } }),
-              h('button', { className: 'btn btn-primary', onClick: function() { document.getElementById('fileInput').click(); } }, '選擇檔案'),
-              appState.data.length > 0 && h('button', { className: 'btn btn-secondary' }, '已載入: ' + formatNum(appState.data.length) + ' 筆'),
-              appState.data.length > 0 && h('button', { className: 'btn btn-danger',
-                onClick: function() { clearDB().then(function() { setAppState(function(p) { return Object.assign({}, p, { data: [], filteredData: [], lastDiag: [], message: '已清除快取', messageType: 'info', uploadStatus: '' }); }); }); }
-              }, '清除快取')
-            )
           ),
 
           // ===== 4. Data Table =====
